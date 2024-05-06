@@ -1,0 +1,95 @@
+met_labels,Group
+M_1_Ornithine,Amino acid
+M_10_Glycine,Amino acid
+M_103_Proline..4.hydroxy,Amino acid
+M_1030_2.3.Dihydroxybutanoic.acid,Carboxylic acid
+M_1032_d.Galactose,Sugar derivative
+M_1035_Urea,Amino acid
+M_108_Glucopyranose,Sugar derivative
+M_11_Palmitic.acid,Carboxylic acid
+M_116_Myristic.acid,Carboxylic acid
+M_119_Alpha.ketoglutaric.acid,Carboxylic acid
+M_12_Proline,Amino acid
+M_120_d.Galactose,Amino acid
+M_123_Tryptophan,Carboxylic acid
+M_127_2.Ethyl.3.hydroxypropionic.acid,Hydroxy acid
+M_13_Oleic.acid,Carboxylic acid
+M_132_Phosphoric.acid.monomethyl.ester,Carboxylic acid
+M_14_Linoleic.acid,Carboxylic acid
+M_140_l.Threonine,Amino acid
+M_159_Levoglucosan,Sugar derivative
+M_16_Tyrosine,Amino acid
+M_162_1H.Indole.3.acetic.acid,Carboxylic acid
+M_165_2.aminobutyric.acid,Amino acid
+M_17_Stearic.acid,Carboxylic acid
+M_177_d.Glucose,Sugar derivative
+M_181_Palmitelaidic.acid,Carboxylic acid
+M_183_Acetic.acid,Carboxylic acid
+M_19_Cholesterol,Sterol
+M_191_Pyruvic.acid,Hydroxy acid
+M_2_Glutamic.acid..3TMS,Amino acid
+M_20_Valine,Amino acid
+M_200_Proline..4.hydroxy...trans.,amino acid
+M_208_L.Tryptophan,Amino acid
+M_21_Glyceric.acid,Sugar derivative
+M_210_2.Oxoisovaleric.acid,Hydroxy acid
+M_211_Linolenic.acid,Carboxylic acid
+M_212_11.Eicosenoic.acid,Carboxylic acid
+M_22_3.4.Dihydroxybutanoic.acid,Sugar derivative
+M_220_3.4.5.Trihydroxypentanoic.acid,Sugar derivative
+M_23_Leucine,Amino acid
+M_230_L.Cysteine,Amino acid
+M_233_Glucopyranose,Sugar derivative
+M_234_Phenylalanine..dl,Phenolic compound
+M_24_Serine,Amino acid
+M_242_D.Xylopyranose,Sugar derivative
+M_25_3.Hydroxybutyric.acid,Hydroxy acid
+M_250_alpha.Hydroxyvaleric.acid,Carboxylic acid
+M_26_Isoleucine,Amino acid
+M_265_Octanoic.acid,Carboxylic acid
+M_27_2.Hydroxybutyric.acid,Hydroxy acid
+M_274_monostearin,alcohol
+M_279_Pentitol..3.desoxy,Sugar derivative
+M_28_Alanine,Amino acid
+M_298_beta.Hydroxyisovaleric.acid,Carboxylic acid
+M_3_Phenylalanine,Amino acid
+M_30_Arachidonic.acid,Carboxylic acid
+M_303_L.Proline..5.oxo,Amino acid
+M_304_Decanoic.acid,Carboxylic acid
+M_31_Lactic.acid,Carboxylic acid
+M_313_1.Monooleoylglycerol,alcohol
+M_318_Malic.acid,Hydroxy acid
+M_362_Glucopyranose,Sugar derivative
+M_39_Erythronic.acid,Sugar derivative
+M_4_Methionine,Amino acid
+M_43_beta.D.Galactofuranose,Sugar derivative
+M_44_Aminomalonic.acid,Amino acid
+M_46_Hexadecanoic.acid..2.3.dihydroxy,Carboxylic acid
+M_47_Creatinine,Amino acid
+M_5_Threonine,Amino acid
+M_50_Glycerol.2.phosphate,Phosphate derivative
+M_51_D.Fructose,Sugar derivative
+M_54_1.Octadecanol,Carboxylic acid
+M_5856_2.Butenedioic.acid,Carboxylic acid
+M_6_2.4.Dihydroxybutanoic.acid.,Carboxylic acid
+M_62_Glycerol,alcohol
+M_63_4..1.1.3.3..tetramethylbutyl.phenol,Phenol
+M_64_L.Proline..5.oxo,Amino acid
+M_65_Ribonic.acid,Sugar derivative
+M_71_Tyrosine,Phenol
+M_75_Hydrocinnamic.acid,Phenol
+M_76_Lauric.acid,Carboxylic acid
+M_8_Aspartic.acid,Amino acid
+M_81_Ethanolamine,Amino acid
+M_83_Nonanoic.acid,Carboxylic acid
+M_86_Arabinofuranose,Sugar derivative
+M_88_Galactonic.acid,Sugar derivative
+M_9_Citric.acid,Carboxylic acid
+M_932_Ribonic.acid,Sugar derivative
+M_937_Erythritol,Sugar derivative
+M_938_Xylitol,Sugar derivative
+M_946_Butane..1.2.3.trishydroxy,Hydroxy acid
+M_958_Glycoside..?.methyl,Sugar derivative
+M_96_4.Methyl.2.oxovaleric.acid,Hydroxy acid
+M_98_Myo.Inositol,Sugar derivative
+M_99_Arabinitol,Sugar derivative
