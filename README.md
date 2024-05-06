@@ -49,7 +49,7 @@ z0, Lw = Homogeneous_Windows(data,modifier_names,L_in,Delta_in)
 
 #### Continuous outcome using linear regression
 
-Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
+ESPClust provides three functions to deal with 1, 2 or 3 potential ESP modifiers:
 
 ```
 esp_df = effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
@@ -65,7 +65,7 @@ esp_df = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0
 
 #### Binary outcome (two classes) using logistic regression
 
-Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
+ESPClust provides three functions to deal with 1, 2 or 3 potential ESP modifiers:
 
 ```
 esp_df = effect_windows1_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
@@ -99,10 +99,22 @@ For a given window, the datagrame gives the following columns:
 * M columns giving the effect sizes $\{e_m\}_{m=1}^M$ within the window for each metabolite.
 
 
-### Plotting the effect size for the cover windows 
+### Plotting the effect size for the cover windows of an exposure variable and a covariate
+
 ```
 Eff_size_Windows_plot(esp_df,variable,modifier,no_effect_value,errorbar)
 ```
+
+#### Input
+* `esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space (see full description in the section "Estimating the effect size profile (ESP)"). 
+* `variable`: Exposure variable whose window effect size will be plotted vs. a covariate which is considered as a potential effect size modifier.
+* `modifier`: Covariate explored as potential effect size modifier.
+* `no_effect_value`: Value where effect size is absent.
+** Set to 0 if the effect size corresponds to the slope of a linear regression model. Set to 1 For effect sizes corresponding to logistic regression 
+- `errorbar`: If set to "Y", it indicates the length of windows with error bars. If set to any other value (e.g. "N"), only the mid points of the window segments are plotted.
+  
+#### Output
+A plot of the 
 
 ### Clustering indices analysis
 
