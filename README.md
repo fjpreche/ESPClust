@@ -154,9 +154,65 @@ x_pca,cumVar = ESP_pca(features_df,cluster_method,plotYN,pcomp_1,pcomp_2,n_clust
 * `x_pca`: Coordinates of the projection of each feature on the principal component directions. 
 * `cumVar`: array giving the cumulative explained variance for the principal components.
 
+### Obtaining a list of cluster labels for the window
+
+An array with the cluster label for each window can be obtained with the following function:
+
+```
+labels = ESPClust.Window_clusters_labels(features_df,n_clusters,cluster_method,clusterOrder)
+```
+
+#### Inputs
+* `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
+* `n_clusters`: Number of clusters. Windows within different clusters are represented with different colours.
+*  `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
+* `clusterOrder`:  The order of clusters is arbitrary. This variable accepts a list of integers giving the label we wish for each cluster.
+
+#### Outputs
+`lables`: An array of cluster labels for each window.
+
 
 ### Plot of clusters in the covariate space
-Using windows midpoints...
+
+The effect size profile clusters can be visualised in the covariate space using this function (windows are represented by their midpoint):
+
 ```
 plot_clusters_CovSpace(esp_df,X_name,modifier_names,n_clusters,cluster_method,clusterOrder)
 ```
+
+#### Inputs
+* `esp_df`: A dataframe with a row for each window of the cover used to sample the covariate space (see full description in the section "Estimating the effect size profile (ESP)"). 
+* `X_name`: List with the names of the columns in `data` corresponding to the exposures.
+* `modifier_names`: List of names of covariates to be explored as potential effect modifiers.
+* `n_clusters`: Number of clusters. Windows within different clusters are represented with different colours.
+* `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
+* `clusterOrder`:  The order of clusters is arbitrary. This variable accepts a list of integers giving the label we wish for each cluster.
+  
+#### Outputs
+Plots are provided which depend on the number of effect modifiers considered:
+* One effect modifier: A 2D scatterplot with the value of the modifier in the horizontal axis.
+* Two effect modifiers: A 2D scatterplot with each modifier represented along each of the axes.
+* Three effect modifiers: Two 2D scatterplots representing clusters in the space spanned by pairs of covariates. One 3D plot with axes corresponding to each of the covariates.
+
+### Cluster centroids and clustering inertia
+
+The coordinates of the centroids of the clusters, their dispersion and inertia of the clustering are provided by the following function:
+
+```
+centroids,centroids_SD,inertia = ESPClust.Window_cluster_centroids(features_df,n_clusters,cluster_method,plot,scale_ErrorSD,clusterOrder,diff_sorted)
+```
+
+#### Inputs:
+* `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
+* `n_clusters`: Number of clusters. Windows within different clusters are represented with different colours.
+* `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
+* `clusterOrder`:  The order of clusters is arbitrary. This variable accepts a list of integers giving the label we wish for each cluster.
+* `plot` ('none', 'errorbar',  'lines', 'points', 'points-lines'): A plot is not provided if this variable is set to 'none'. For any other option, a plot is provided. `errorbar` plots the coordinates and their standard deviation (multiplied by a factor `scale_ErrorSD`). If the variation of the coordinates is not required, `lines`, `points`, `points-lines` can be used to plot the coordinates of the cluster centroids in three different ways.
+* `scale_ErrorSD`: If `plot = errorbar`, the error bar is the standard deviation scaled by a factor `scale_ErrorSD`. For `scale_ErrorSD = 1`, the error bars correspond to one standard deviation.
+
+* `diff_sorted` (Y/N): Whether the coordinates (i.e. exposures) should be sorted to show those that differ the most between clusters first.
+
+#### Outputs:
+* `centroids`: Dataframe giving the coordinates of the cluster centroids. It has one column for each exposure and a row for each cluster.
+* `centroids_SD`: Dataframe giving the standard deviation of the coordinates of the cluster centroids. It has one column for each exposure and a row for each cluster.
+* `inertia`: Inertia of the clustering. This is the sum of the quadratic distance from each exposure to the cluster centroid.
