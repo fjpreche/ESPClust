@@ -45,7 +45,9 @@ z0, Lw = Homogeneous_Windows(data,modifier_names,L_in,Delta_in)
 - `z0`: List of coordinates of the origin of each window. 
 - `Lw`: List of dimensions of each window.
 
-### Estimating the effect size profile (ESP) for a ***continuous outcome using linear regression***
+### Estimating the effect size profile (ESP)
+
+#### Continuous outcome using linear regression
 
 Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
 
@@ -61,7 +63,23 @@ esp_df = effect_windows2_lin(data,X_name,Y_name,confound_names,modifier_names,z0
 esp_df = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
 ```
 
-#### Inputs
+#### Binary outcome (two classes) using logistic regression
+
+Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
+
+```
+esp_df = effect_windows1_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+```
+
+```
+esp_df = effect_windows2_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+```
+
+```
+esp_df = effect_windows3_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+```
+
+##### Inputs
 - `data` (similar to `featuresExtended`): A dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
 - `X_name`: List with the names of the columns in `data` corresponding to the exposures.
 - `Y_name`:  Names of the column in `data` corresponding to the outcome.
@@ -71,7 +89,7 @@ esp_df = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0
 - `Lw`: List of dimensions of each window.
 - `nmin`: Minimum number of observations within a window for effect sizes to be estimated.
 
-#### Outputs
+##### Outputs
 `esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space. 
 
 For a given window, the datagrame gives the following columns:
