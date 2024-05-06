@@ -105,34 +105,55 @@ For a given window, the datagrame gives the following columns:
 Eff_size_Windows_plot(esp_df,variable,modifier,no_effect_value,errorbar)
 ```
 
-#### Input
+#### Inputs
 * `esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space (see full description in the section "Estimating the effect size profile (ESP)"). 
 * `variable`: Exposure variable whose window effect size will be plotted vs. a covariate which is considered as a potential effect size modifier.
-* `modifier`: Covariate explored as potential effect size modifier.
-* `no_effect_value`: Value where effect size is absent.
-** Set to 0 if the effect size corresponds to the slope of a linear regression model. Set to 1 For effect sizes corresponding to logistic regression 
-- `errorbar`: If set to "Y", it indicates the length of windows with error bars. If set to any other value (e.g. "N"), only the mid points of the window segments are plotted.
+* `modifier`: Continuous covariate explored as potential effect size modifier.
+* `no_effect_value`: Value where effect size is absent. Set to 0 if the effect size corresponds to the slope of a linear regression model. Set to 1 if the effect size corresponds to the odds ratio of a logistic regression model. 
+- `errorbar`: If set to "Y", it indicates the length of windows with error bars. If set to any other value (e.g. "N"), only the midpoints of the window segments are plotted.
   
-#### Output
-A plot of the 
+#### Outputs
+A plot of the effect size of the association between the `variable` and the outcome for different windows of the `modifier` covariate. 
 
 ### Clustering indices analysis
 
 ```
-index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall = Clustering_indices(distance,kmax,cluster_method,plotYN)
+index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall = Clustering_indices(features_df,kmax,cluster_method,plotYN)
 ```
 
-### Principal component visualisation of the clusters in the effect size space
+### Inputs
+* `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
+* `kmax`: Maximum number of clusters to be explored.
+*  `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
+* `plotYN` (Y/N): If set to "Y", a plot for each of the clustering measures as a function of the number of clusters is displayed.
+
+#### Outputs
+* `index_vs_K_df`: A dataframe with the value of the clustering measures as a function of the number of clusters.
+* `KoptimalCH`: Number of clusters at the maximum of the Calinski-Harabasz measure.
+* `KoptimalDB`: Number of clusters at the maximum of the Davies-Bouldin measure.
+* `KoptimalSil`: Number of clusters at the maximum of the silhouette measure.
+* `KoptimalElbow`: Elbow of the inertia vs. the number of clusters.
+* `koptimal_overall`: Most frequently occurring value among the four clustering indices. If there is no repeated number across the indices or in case of a tie, we will use the smallest number of clusters. Agglomerative clustering will be used throughout the article.
+  
+### Visualisation of the clusters in the effect size space using two principal components
 
 ```
-x_pca,cumVar = ESP_pca(esp_df,X_name,cluster_method,plot_yn,pcomp_1,pcomp_2,n_clusters,clusterOrder)
+x_pca,cumVar = ESP_pca(features_df,cluster_method,plotYN,pcomp_1,pcomp_2,n_clusters,clusterOrder)
 ```
 
-### Cluster labels
+#### Inputs
+* `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
+*  `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
+* `plotYN` (Y/N): If set to "Y", a plot for each of the clustering measures as a function of the number of clusters is displayed.
+* `pcomp_1`: Integer giving the first principal component.
+* `pcomp_2`: Integer giving the second principal component.
+* `n_clusters`: Number of clusters. Windows within different clusters are represented with different colours.
+* `clusterOrder`:  The order of clusters is arbitrary. This variable accepts a list of integers giving the label we wish for each cluster.
 
-```
-labels = Window_clusters_labels(distance,n_clusters,cluster_method,clusterOrder)
-```
+#### Outputs
+* `x_pca`: Coordinates of the projection of each feature on the principal component directions. 
+* `cumVar`: array giving the cumulative explained variance for the principal components.
+
 
 ### Plot of clusters in the covariate space
 Using windows midpoints...
