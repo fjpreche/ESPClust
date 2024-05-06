@@ -24,7 +24,7 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 - `thmissing`: A threshold value in [0,1]. Metabolites and individuals whose percentage of missing values is above this threshold Threshold for discarding metabolites or individuals with missing values.
 - `otherVariables`: A dataframe with with covariates.
 - `k_neighbours`: Number of neighbours for nearest neighbour imputation.
-- `featTransform` (`Plus1Log`, ????): Transformation of the data.
+- `featTransform` (`None`, `Plus1Log`): If set to `None`, do not transform the data. If set to `Plus1Log`, transformation of the data by adding 1 and taking the natural logarithm.
 - `plotYN`: If set to 'Y', plots are provided for the array of missing exposures and the missing percentage for exposures and individuals.
 
 #### Outputs
@@ -33,19 +33,19 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 - 
 ### Creating a cover for the covariate space with windows of homogeneous size
 ```
-z0, Lw = Homogeneous_Windows(data,modifier_names,Delta_All,L_All)
+z0, Lw = Homogeneous_Windows(data,modifier_names,L_in,Delta_in)
 ```
 #### Inputs
-- `data`
-- `modifier_names`
-- `Delta_All`
-- `L_All`
+- `data` (similar to `featuresExtended`): A dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
+- `modifier_names`: List of names of covariates to be explored as potential effect modifiers.
+- `L_in`: A list of window lengths for each effect size modifier considered.
+- `Delta_in`: A list of the steps used to glide the window in the direction of each effect size modifier.
 
 #### Outputs
 - `z0`: List of coordinates of the origin of each window. 
 - `Lw`: List of dimensions of each window.
 
-### Estimating the effect size profile (ESP) for a continuous outcome using linear regression
+### Estimating the effect size profile (ESP) for a ***continuous outcome using linear regression***
 
 Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
 
