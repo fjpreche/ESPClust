@@ -50,31 +50,36 @@ z0, Lw = Homogeneous_Windows(data,modifier_names,Delta_All,L_All)
 Three functions are defined to deal with 1, 2 or 3 potential ESP modifiers:
 
 ```
-esp_df,esp_df_ciL,esp_df_ciH = effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+esp_df = effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
 ```
 
 ```
-esp_df,esp_df_ciL,esp_df_ciH = effect_windows2_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+esp_df = effect_windows2_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
 ```
 
 ```
-esp_df,esp_df_ciL,esp_df_ciH = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+esp_df = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
 ```
 
 #### Inputs
-- `data`
-- `X_name`
-- `Y_name`
-- `confound_names`
-- `modifier_names`
-- `z0`
-- `Lw`
-- `nmin`
+- `data` (similar to `featuresExtended`): A dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
+- `X_name`: List with the names of the columns in `data` corresponding to the exposures.
+- `Y_name`:  Names of the column in `data` corresponding to the outcome.
+- `confound_names`: List of names of covariates considered as confounders. The function will adjust for confounding effects for these variables within each window.
+- `modifier_names`: List of names of covariates to be explored as potential effect modifiers.
+- `z0`: List of coordinates of the origin of each window. 
+- `Lw`: List of dimensions of each window.
+- `nmin`: Minimum number of observations within a window for effect sizes to be estimated.
 
 #### Outputs
-- `esp_df`
-- `esp_df_ciL`
-- `esp_df_ciH`
+`esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space. 
+
+For a given window, the datagrame gives the following columns:
+* `nobs`: Number of observations within the window.
+* `BMI_z0`: Origin of the window.
+* `BMI_Lw`: Length of the window.
+* M columns giving the effect sizes $\{e_m\}_{m=1}^M$ within the window for each metabolite.
+
 
 ### Plotting the effect size for the cover windows 
 ```
