@@ -209,7 +209,6 @@ centroids,centroids_SD,inertia = ESPClust.Window_cluster_centroids(features_df,n
 * `clusterOrder`:  The order of clusters is arbitrary. This variable accepts a list of integers giving the label we wish for each cluster.
 * `plot` ('none', 'errorbar',  'lines', 'points', 'points-lines'): A plot is not provided if this variable is set to 'none'. For any other option, a plot is provided. `errorbar` plots the coordinates and their standard deviation (multiplied by a factor `scale_ErrorSD`). If the variation of the coordinates is not required, `lines`, `points`, `points-lines` can be used to plot the coordinates of the cluster centroids in three different ways.
 * `scale_ErrorSD`: If `plot = errorbar`, the error bar is the standard deviation scaled by a factor `scale_ErrorSD`. For `scale_ErrorSD = 1`, the error bars correspond to one standard deviation.
-
 * `diff_sorted` (Y/N): Whether the coordinates (i.e. exposures) should be sorted to show those that differ the most between clusters first.
 
 #### Outputs:
