@@ -107,14 +107,14 @@ print("Total Number of Windows:", n_windows)
 
 ### 3. Estimating the effect size profile (ESP)
 
-# Function: `effect_windows`
+#### Function: `effect_windows`
 
-## Description
+##### Description
 The `effect_windows` function calculates effect sizes for exposures within windows defined across a covariate space. This is a flexible function that supports user-defined methods (`effsize_method`) for effect size estimation, allowing for various types of outcomes and modeling strategies. The windowing process is guided by modifier variables that define the dimensions of the covariate space.
 
 ---
 
-## Inputs
+##### Inputs
 - **`data`**:  
   A dataframe containing cleaned exposures, confounders, effect modifiers, and the outcome variable.
 
@@ -149,7 +149,7 @@ The `effect_windows` function calculates effect sizes for exposures within windo
 
 ---
 
-## Outputs
+##### Outputs
 - **`esp_df`**:  
   A dataframe summarizing the results for each window, with the following columns:
   - `nobs`: The number of observations within the window.
@@ -160,7 +160,7 @@ The `effect_windows` function calculates effect sizes for exposures within windo
 
 ---
 
-## Example Usage
+##### Example Usage
 ```python
 # Example data
 data = pd.DataFrame({
@@ -188,14 +188,14 @@ esp_df_lin = effect_windows(data, X_name, Y_name, confound_names, modifier_names
 esp_df_logit = effect_windows(data, X_name, Y_name, confound_names, modifier_names, z0, Lw, nmin, effsize_logit_odds)
 ```
 
-# Function: `effsize_lin`
+#### Function: `effsize_lin`
 
-## Description
+##### Description
 The `effsize_lin` function calculates the effect size of an exposure on an outcome using linear regression. The function assumes that the last column in the input dataframe (`xdf`) is the exposure variable of interest, while the other columns represent confounders.
 
 ---
 
-## Inputs
+##### Inputs
 - **`y`**:  
   The outcome variable (continuous or discrete). This can be a list, numpy array, or pandas Series.
 
@@ -206,13 +206,13 @@ The `effsize_lin` function calculates the effect size of an exposure on an outco
 
 ---
 
-## Outputs
+##### Outputs
 - **`effsize`**:  
   The regression coefficient of the exposure variable, representing its effect size.
 
 ---
 
-## Example Usage
+##### Example Usage
 ```python
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
@@ -230,14 +230,14 @@ effsize = effsize_lin(y, xdf)
 print(f"Effect size (linear regression): {effsize}")
 ```
 
-# Function: `effsize_logit_odds`
+#### Function: `effsize_logit_odds`
 
-## Description
+##### Description
 The `effsize_logit_odds` function calculates the odds ratio of an exposure on a binary outcome using logistic regression. The function assumes that the last column in the input dataframe (`xdf`) is the exposure variable of interest, while the other columns represent confounders.
 
 ---
 
-## Inputs
+##### Inputs
 - **`y`**:  
   The binary outcome variable (values should be 0 or 1). This can be a list, numpy array, or pandas Series.
 
@@ -248,13 +248,13 @@ The `effsize_logit_odds` function calculates the odds ratio of an exposure on a 
 
 ---
 
-## Outputs
+##### Outputs
 - **`odds_ratio`**:  
   The odds ratio of the exposure variable, representing its effect size on the binary outcome.
 
 ---
 
-## Example Usage
+##### Example Usage
 ```python
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
