@@ -16,14 +16,14 @@ A tutorial is provided in the Tutorial_ssSIG.ipynb notebook. This illustrates th
 
 ### 1. Data cleaning
 
-# Function: `data_cleaning`
+#### Function: `data_cleaning`
 
-## Description
+##### Description
 The `data_cleaning` function preprocesses and cleans a dataset of exposures, outcome variables, and covariates by addressing missing values, scaling features, and optionally transforming data. It ensures that exposures and observations with excessive missingness are removed and imputes remaining missing values using nearest neighbors.
 
 ---
 
-## Inputs
+##### Inputs
 - **`featuresIn`**:  
   Dataframe of exposures (metabolites or other features) to be cleaned.
 
@@ -52,7 +52,7 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
 
 ---
 
-## Outputs
+##### Outputs
 - **`featuresExtended`**:  
   A dataframe containing the cleaned exposures, covariates (`otherVariables`), and the outcome variable. Missing values are imputed, features are scaled, and columns from `otherVariables` are appended.
 
@@ -61,7 +61,7 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
 
 ---
 
-## Steps Performed
+##### Steps Performed
 1. **Missing Value Analysis**:  
    - Calculates the total number of missing values and their proportions for both exposures and individuals.
    - Removes exposures and individuals exceeding the missingness threshold (`thmissing`).
@@ -91,7 +91,7 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
 
 ---
 
-## Example Usage
+##### Example Usage
 ```python
 # Example inputs
 featuresIn = pd.DataFrame({
