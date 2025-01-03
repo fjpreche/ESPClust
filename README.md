@@ -64,12 +64,12 @@ print("Window Dimensions (L):", L)
 print("Gliding Steps (Delta):", Delta)
 ```
 
-### 2.2. Function: `Homogeneous_Windows`
+#### 2.2. Function: `Homogeneous_Windows`
 
-#### Description
+##### Description
 The `Homogeneous_Windows` function systematically divides a J-dimensional covariate space into gliding hyperrectangles (windows) of specified dimensions (`L_All`) and step sizes (`Delta_All`). This creates a grid-like structure that allows for the exploration of local heterogeneities in effect sizes.  
 
-#### Inputs
+##### Inputs
 - **`data`**: A DataFrame containing the dataset with covariates of interest.  
 - **`modifier_names`**: A list of column names in the `data` DataFrame, representing the covariates to be used for window generation.  
 - **`L_All`**: A list of window dimensions (lengths) for each covariate.  
@@ -78,13 +78,13 @@ The `Homogeneous_Windows` function systematically divides a J-dimensional covari
   - `'c'` for continuous covariates.  
   - Other values can be used for categorical covariates (e.g., `'d'` for discrete).  
 
-#### Outputs
+##### Outputs
 - **`z0`**: A list of origin coordinates for each window in the covariate space. These represent the starting points of the windows for each dimension.  
 - **`Lw`**: A list of dimensions (lengths) for each window along each covariate.  
 - **`win_dim`**: A list of the number of windows generated along each covariate dimension.  
 - **`n_windows`**: The total number of windows generated across all dimensions, calculated as the product of `win_dim`.
 
-#### Example Usage
+##### Example Usage
 ```python
 # Example input data
 data = pd.DataFrame({
