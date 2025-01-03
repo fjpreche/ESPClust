@@ -15,21 +15,108 @@ A tutorial is provided in the Tutorial_ssSIG.ipynb notebook. This illustrates th
 ## List of functions
 
 ### 1. Data cleaning
-```
-featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,annotation,thmissing,k_neighbours,featTransform,plotYN)
-```
-#### Inputs
-- `featuresIn`: exposures dataframe.
-- `Yin`: outcome.
-- `thmissing`: A threshold value in [0,1]. Metabolites and individuals whose percentage of missing values is above this threshold Threshold for discarding metabolites or individuals with missing values.
-- `otherVariables`: A dataframe with covariates.
-- `k_neighbours`: Number of neighbours for nearest neighbour imputation.
-- `featTransform` (`None`, `Plus1Log`): If set to `None`, do not transform the data. If set to `Plus1Log`, transformation of the data by adding 1 and taking the natural logarithm.
-- `plotYN`: If set to 'Y', plots are provided for the array of missing exposures and the missing percentage for exposures and individuals.
 
-#### Outputs
-- `featuresExtended`: a dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
-- `exposure_names`: Names of the exposures that were kept after cleaning.
+# Function: `data_cleaning`
+
+## Description
+The `data_cleaning` function preprocesses and cleans a dataset of exposures, outcome variables, and covariates by addressing missing values, scaling features, and optionally transforming data. It ensures that exposures and observations with excessive missingness are removed and imputes remaining missing values using nearest neighbors.
+
+---
+
+## Inputs
+- **`featuresIn`**:  
+  Dataframe of exposures (metabolites or other features) to be cleaned.
+
+- **`Yin`**:  
+  Dataframe containing the outcome variable.
+
+- **`thmissing`**:  
+  A threshold value between `[0, 1]` that determines the maximum allowable percentage of missing values for metabolites and individuals.  
+  - Metabolites and individuals with missing values exceeding this threshold are discarded.
+
+- **`otherVariables`**:  
+  Dataframe of covariates (additional variables related to the dataset).
+
+- **`k_neighbours`**:  
+  Number of neighbors to use for imputation of missing values using the nearest neighbors algorithm.
+
+- **`featTransform`** (`None` or `Plus1Log`):  
+  Transformation method for exposures:  
+  - If set to `None`, no transformation is applied.  
+  - If set to `Plus1Log`, exposures are transformed by adding 1 and applying the natural logarithm.
+
+- **`plotYN`** (`'Y'` or `'N'`):  
+  Flag to control whether to generate plots:  
+  - `'Y'`: Generate visualizations of missing data patterns.  
+  - `'N'`: Skip plotting.
+
+---
+
+## Outputs
+- **`featuresExtended`**:  
+  A dataframe containing the cleaned exposures, covariates (`otherVariables`), and the outcome variable. Missing values are imputed, features are scaled, and columns from `otherVariables` are appended.
+
+- **`exposure_names`**:  
+  A list of names of exposures retained after cleaning.
+
+---
+
+## Steps Performed
+1. **Missing Value Analysis**:  
+   - Calculates the total number of missing values and their proportions for both exposures and individuals.
+   - Removes exposures and individuals exceeding the missingness threshold (`thmissing`).
+
+2. **Visualization (Optional)**:  
+   - If `plotYN` is set to `'Y'`, generates plots:  
+     - Array of missing exposures.  
+     - Percentage of missing values for exposures and individuals.
+
+3. **Imputation**:  
+   - Performs nearest neighbors imputation on remaining missing values using the specified `k_neighbours`.
+
+4. **Feature Transformation**:  
+   - If `featTransform` is `Plus1Log`, applies the transformation:  
+     \[
+     \text{transformed\_feature} = \log(\text{feature} + 1)
+     \]
+
+5. **Scaling**:  
+   - Standardizes all features (z-score normalization).
+
+6. **Combining Data**:  
+   - Appends the outcome variable (`Yin`) and covariates (`otherVariables`) to the cleaned features.
+
+7. **Final Cleanup**:  
+   - Drops rows containing any remaining missing values.
+
+---
+
+## Example Usage
+```python
+# Example inputs
+featuresIn = pd.DataFrame({
+    "Metabolite1": [1, np.nan, 3],
+    "Metabolite2": [np.nan, 5, 6],
+    "Metabolite3": [7, 8, 9]
+})
+Yin = pd.DataFrame({"label": [0, 1, 0]})
+otherVariables = pd.DataFrame({
+    "Covariate1": [10, 11, 12],
+    "Covariate2": [20, 21, 22]
+})
+annotation = pd.DataFrame({"met_labels": ["Metabolite1", "Metabolite2", "Metabolite3"]})
+thmissing = 0.2
+k_neighbours = 2
+featTransform = "Plus1Log"
+plotYN = "N"
+
+# Call the function
+featuresExtended, exposure_names = data_cleaning(featuresIn, Yin, otherVariables, annotation, thmissing, k_neighbours, featTransform, plotYN)
+
+print("Cleaned Dataframe:")
+print(featuresExtended)
+print("Exposure Names:", exposure_names)
+```
 
 ### 2. Building a cover of the covariate space with gliding windows
 This is achieved through the functions `window_parameters` and `Homogeneous_Windows`
