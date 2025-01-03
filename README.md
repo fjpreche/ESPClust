@@ -14,7 +14,7 @@ A tutorial is provided in the Tutorial_ssSIG.ipynb notebook. This illustrates th
 
 ## List of functions
 
-### Data cleaning
+### 1. Data cleaning
 ```
 featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,annotation,thmissing,k_neighbours,featTransform,plotYN)
 ```
@@ -32,24 +32,24 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 - `exposure_names`: Names of the exposures that were kept after cleaning.
 - 
 
-### Building a cover of the covariate space with gliding windows
+### 2. Building a cover of the covariate space with gliding windows
 This is achieved through the functions `window_parameters` and `Homogeneous_Windows`
 
-### Function: `window_parameters`
+#### Function: `window_parameters`
 
-#### Description
+##### Description
 This function calculates the dimensions (`L`) and gliding steps (`Delta`) of the gliding windows based on the data distribution. These parameters or other set by the analyst are used as input for the `Homogeneous_Windows` function to systematically explore the covariate space.  
 
-#### Inputs
+##### Inputs
 - **`data1`**: A DataFrame containing the covariates for which window dimensions and gliding steps need to be calculated.  
 - **`nmin`** *(optional)*: The minimum number of observations required in each window (default = 10).  
 - **`CL`** *(optional)*: The confidence level for estimating window dimensions, used to compute the quantile of the empirical window size distribution (default = 0.95). Must be a value between 0 and 1.
 
-#### Outputs
+##### Outputs
 - **`L`**: A list of window lengths for each covariate in `data1`.  
 - **`Delta`**: A list of gliding step sizes for each covariate in `data1`.  
 
-#### Example Usage
+##### Example Usage
 ```python
 # Example input data
 data1 = pd.DataFrame({
