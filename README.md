@@ -62,6 +62,7 @@ L, Delta = window_parameters(data1, nmin=20, CL=0.9)
 
 print("Window Dimensions (L):", L)
 print("Gliding Steps (Delta):", Delta)
+```
 
 ### Function: `Homogeneous_Windows`
 
@@ -102,7 +103,7 @@ print("Window Origins (z0):", z0)
 print("Window Dimensions (Lw):", Lw)
 print("Number of Windows per Dimension (win_dim):", win_dim)
 print("Total Number of Windows:", n_windows)
-
+```
 
 ### Estimating the effect size profile (ESP)
 
