@@ -22,7 +22,7 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 - `featuresIn`: exposures dataframe.
 - `Yin`: outcome.
 - `thmissing`: A threshold value in [0,1]. Metabolites and individuals whose percentage of missing values is above this threshold Threshold for discarding metabolites or individuals with missing values.
-- `otherVariables`: A dataframe with with covariates.
+- `otherVariables`: A dataframe with covariates.
 - `k_neighbours`: Number of neighbours for nearest neighbour imputation.
 - `featTransform` (`None`, `Plus1Log`): If set to `None`, do not transform the data. If set to `Plus1Log`, transformation of the data by adding 1 and taking the natural logarithm.
 - `plotYN`: If set to 'Y', plots are provided for the array of missing exposures and the missing percentage for exposures and individuals.
@@ -31,19 +31,78 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 - `featuresExtended`: a dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
 - `exposure_names`: Names of the exposures that were kept after cleaning.
 - 
-### Creating a cover for the covariate space with windows of homogeneous size
-```
-z0, Lw = Homogeneous_Windows(data,modifier_names,L_in,Delta_in)
-```
+
+### Building a cover of the covariate space with gliding windows
+This is achieved through the functions `window_parameters` and `Homogeneous_Windows`
+
+### Function: `window_parameters`
+
+#### Description
+This function calculates the dimensions (`L`) and gliding steps (`Delta`) of the gliding windows based on the data distribution. These parameters or other set by the analyst are used as input for the `Homogeneous_Windows` function to systematically explore the covariate space.  
+
 #### Inputs
-- `data` (similar to `featuresExtended`): A dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
-- `modifier_names`: List of names of covariates to be explored as potential effect modifiers.
-- `L_in`: A list of window lengths for each effect size modifier considered.
-- `Delta_in`: A list of the steps used to glide the window in the direction of each effect size modifier.
+- **`data1`**: A DataFrame containing the covariates for which window dimensions and gliding steps need to be calculated.  
+- **`nmin`** *(optional)*: The minimum number of observations required in each window (default = 10).  
+- **`CL`** *(optional)*: The confidence level for estimating window dimensions, used to compute the quantile of the empirical window size distribution (default = 0.95). Must be a value between 0 and 1.
 
 #### Outputs
-- `z0`: List of coordinates of the origin of each window. 
-- `Lw`: List of dimensions of each window.
+- **`L`**: A list of window lengths for each covariate in `data1`.  
+- **`Delta`**: A list of gliding step sizes for each covariate in `data1`.  
+
+#### Example Usage
+```python
+# Example input data
+data1 = pd.DataFrame({
+    "Z1": np.random.normal(size=100),
+    "Z2": np.random.uniform(size=100)
+})
+
+# Calculate window parameters
+L, Delta = window_parameters(data1, nmin=20, CL=0.9)
+
+print("Window Dimensions (L):", L)
+print("Gliding Steps (Delta):", Delta)
+
+### Function: `Homogeneous_Windows`
+
+#### Description
+The `Homogeneous_Windows` function systematically divides a J-dimensional covariate space into gliding hyperrectangles (windows) of specified dimensions (`L_All`) and step sizes (`Delta_All`). This creates a grid-like structure that allows for the exploration of local heterogeneities in effect sizes.  
+
+#### Inputs
+- **`data`**: A DataFrame containing the dataset with covariates of interest.  
+- **`modifier_names`**: A list of column names in the `data` DataFrame, representing the covariates to be used for window generation.  
+- **`L_All`**: A list of window dimensions (lengths) for each covariate.  
+- **`Delta_All`**: A list of gliding step sizes for each covariate.  
+- **`var_type`**: A list specifying the type of each covariate:  
+  - `'c'` for continuous covariates.  
+  - Other values can be used for categorical covariates (e.g., `'d'` for discrete).  
+
+#### Outputs
+- **`z0`**: A list of origin coordinates for each window in the covariate space. These represent the starting points of the windows for each dimension.  
+- **`Lw`**: A list of dimensions (lengths) for each window along each covariate.  
+- **`win_dim`**: A list of the number of windows generated along each covariate dimension.  
+- **`n_windows`**: The total number of windows generated across all dimensions, calculated as the product of `win_dim`.
+
+#### Example Usage
+```python
+# Example input data
+data = pd.DataFrame({
+    "Z1": np.random.normal(size=100),
+    "Z2": np.random.uniform(size=100)
+})
+
+modifier_names = ["Z1", "Z2"]
+L_All = [0.5, 0.3]  # Window dimensions for Z1 and Z2
+Delta_All = [0.1, 0.1]  # Gliding steps for Z1 and Z2
+var_type = ['c', 'c']  # Both covariates are continuous
+
+z0, Lw, win_dim, n_windows = Homogeneous_Windows(data, modifier_names, L_All, Delta_All, var_type)
+
+print("Window Origins (z0):", z0)
+print("Window Dimensions (Lw):", Lw)
+print("Number of Windows per Dimension (win_dim):", win_dim)
+print("Total Number of Windows:", n_windows)
+
 
 ### Estimating the effect size profile (ESP)
 
