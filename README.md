@@ -31,8 +31,8 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
   Dataframe containing the outcome variable.
 
 - **`thmissing`**:  
-  A threshold value between `[0, 1]` that determines the maximum allowable percentage of missing values for metabolites and individuals.  
-  - Metabolites and individuals with missing values exceeding this threshold are discarded.
+  A threshold value between `[0, 1]` that determines the maximum allowable percentage of missing values for exposures and individuals.  
+  - Exposures and individuals with missing values exceeding this threshold are discarded.
 
 - **`otherVariables`**:  
   Dataframe of covariates (additional variables related to the dataset).
@@ -75,16 +75,13 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
    - Performs nearest neighbors imputation on remaining missing values using the specified `k_neighbours`.
 
 4. **Feature Transformation**:  
-   - If `featTransform` is `Plus1Log`, applies the transformation: $\text{transformed\_feature} = \log(\text{feature} + 1)$
+   - If `featTransform` is `Plus1Log`, applies the transformation: `transformed_feature` = \log(`feature` + 1).
 
 5. **Scaling**:  
    - Standardizes all features (z-score normalization).
 
 6. **Combining Data**:  
    - Appends the outcome variable (`Yin`) and covariates (`otherVariables`) to the cleaned features.
-
-7. **Final Cleanup**:  
-   - Drops rows containing any remaining missing values.
 
 ---
 
@@ -357,21 +354,63 @@ print(f"Odds ratio (logistic regression): {odds_ratio}")
 
 ### 4. Plotting the effect size for the cover windows of an exposure variable and a covariate
 
-```
-Eff_size_Windows_plot(esp_df,variable,modifier,no_effect_value,errorbar)
-```
+### Function: `Eff_size_Windows_plot`
+
+#### Description
+This function visualizes the effect size of the association between a given exposure variable and the outcome across different windows of a continuous covariate. The covariate is explored as a potential effect size modifier. The function allows plotting midpoints of windows or adding error bars to represent window lengths.
+
+---
 
 #### Inputs
-* `esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space (see full description in the section "Estimating the effect size profile (ESP)"). 
-* `variable`: Exposure variable whose window effect size will be plotted vs. a covariate which is considered as a potential effect size modifier.
-* `modifier`: Continuous covariate explored as potential effect size modifier.
-* `no_effect_value`: Value where effect size is absent. Set to 0 if the effect size corresponds to the slope of a linear regression model. Set to 1 if the effect size corresponds to the odds ratio of a logistic regression model. 
-- `errorbar`: If set to "Y", it indicates the length of windows with error bars. If set to any other value (e.g. "N"), only the midpoints of the window segments are plotted.
-  
-#### Outputs
-A plot of the effect size of the association between the `variable` and the outcome for different windows of the `modifier` covariate. 
+- **`esp_df`**:  
+  A dataframe containing the effect sizes and related window information for each covariate window.  See a full description in the section "3. Estimating the effect size profile (ESP)".
 
-### Clustering indices analysis
+- **`variable`**:  
+  The name of the column in `esp_df` representing the effect size of the exposure variable to be plotted.
+
+- **`modifier`**:  
+  The name of the covariate (continuous) being explored as a potential effect size modifier. Must match the column prefix in `esp_df` (e.g., `<modifier>_z0` and `<modifier>_Lw`).
+
+- **`no_effect_value`**:  
+  A baseline value indicating no effect size:  
+  - Set to `0` for effect sizes derived from linear regression (slopes).  
+  - Set to `1` for effect sizes derived from logistic regression (odds ratios).
+
+- **`errorbar`**:  
+  Specifies whether to include error bars to represent the window lengths:  
+  - Set to `"Y"` (or `"y"`) to plot error bars based on window lengths (`<modifier>_Lw`).  
+  - Set to `"N"` (or `"n"`) to plot only the midpoints of the windows.  
+  - Any other value will produce a message prompting the user to specify a valid option.
+
+---
+
+#### Outputs
+A plot displaying:  
+1. **Effect Size vs. Modifier Midpoints**: The effect size of the exposure variable is plotted against the midpoints of the covariate windows (`<modifier>_z0` and `<modifier>_z0 + <modifier>_Lw`).  
+2. **Error Bars (Optional)**: If enabled, error bars represent half the window lengths on either side of the midpoint.  
+3. **No Effect Baseline**: A dashed horizontal line indicating the `no_effect_value`.
+
+---
+
+#### Example Usage
+```python
+# Example inputs
+esp_df = pd.DataFrame({
+    "modifier_z0": [1, 2, 3],
+    "modifier_Lw": [0.5, 0.5, 0.5],
+    "variable_effsize": [0.3, 0.5, 0.2]
+})
+variable = "variable_effsize"
+modifier = "modifier"
+no_effect_value = 0  # Linear regression baseline
+errorbar = "N"
+
+# Call the function
+Eff_size_Windows_plot(esp_df, variable, modifier, no_effect_value, errorbar)
+```
+
+### 5. Clustering indices analysis
+
 
 ```
 index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall = Clustering_indices(features_df,kmax,cluster_method,plotYN)
@@ -390,8 +429,9 @@ index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall =
 * `KoptimalSil`: Number of clusters at the maximum of the silhouette measure.
 * `KoptimalElbow`: Elbow of the inertia vs. the number of clusters.
 * `koptimal_overall`: Most frequently occurring value among the four clustering indices. If there is no repeated number across the indices or in case of a tie, we will use the smallest number of clusters. Agglomerative clustering will be used throughout the article.
-  
-### Visualisation of the clusters in the effect size space using two principal components
+
+
+### 6. Visualisation of the clusters in the effect size space using two principal components
 
 ```
 x_pca,cumVar = ESP_pca(features_df,cluster_method,plotYN,pcomp_1,pcomp_2,n_clusters,clusterOrder)
@@ -410,7 +450,7 @@ x_pca,cumVar = ESP_pca(features_df,cluster_method,plotYN,pcomp_1,pcomp_2,n_clust
 * `x_pca`: Coordinates of the projection of each feature on the principal component directions. 
 * `cumVar`: array giving the cumulative explained variance for the principal components.
 
-### Obtaining a list of cluster labels for the window
+### 7. Obtaining a list of cluster labels for the window
 
 An array with the cluster label for each window can be obtained with the following function:
 
@@ -428,7 +468,7 @@ labels = ESPClust.Window_clusters_labels(features_df,n_clusters,cluster_method,c
 `lables`: An array of cluster labels for each window.
 
 
-### Plot of clusters in the covariate space
+### 8. Plot of clusters in the covariate space
 
 The effect size profile clusters can be visualised in the covariate space using this function (windows are represented by their midpoint):
 
@@ -450,7 +490,7 @@ Plots are provided which depend on the number of effect modifiers considered:
 * Two effect modifiers: A 2D scatterplot with each modifier represented along each of the axes.
 * Three effect modifiers: Two 2D scatterplots representing clusters in the space spanned by pairs of covariates. One 3D plot with axes corresponding to each of the covariates.
 
-### Cluster centroids and clustering inertia
+### 9. Cluster centroids and clustering inertia
 
 The coordinates of the centroids of the clusters, their dispersion and inertia of the clustering are provided by the following function:
 
