@@ -411,18 +411,21 @@ Eff_size_Windows_plot(esp_df, variable, modifier, no_effect_value, errorbar)
 
 ### 5. Clustering indices analysis
 
+The clustering of windows involves two steps that are implemented with two functions: `Clustering_indices` and `Elbow_significance`.
+
+#### Function `Clustering_indices`
 
 ```
 index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall = Clustering_indices(features_df,kmax,cluster_method,plotYN)
 ```
 
-### Inputs
+##### Inputs
 * `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
 * `kmax`: Maximum number of clusters to be explored.
 *  `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
 * `plotYN` (Y/N): If set to "Y", a plot for each of the clustering measures as a function of the number of clusters is displayed.
 
-#### Outputs
+##### Outputs
 * `index_vs_K_df`: A dataframe with the value of the clustering measures as a function of the number of clusters.
 * `KoptimalCH`: Number of clusters at the maximum of the Calinski-Harabasz measure.
 * `KoptimalDB`: Number of clusters at the maximum of the Davies-Bouldin measure.
@@ -430,6 +433,29 @@ index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall =
 * `KoptimalElbow`: Elbow of the inertia vs. the number of clusters.
 * `koptimal_overall`: Most frequently occurring value among the four clustering indices. If there is no repeated number across the indices or in case of a tie, we will use the smallest number of clusters. Agglomerative clustering will be used throughout the article.
 
+#### Function `Elbow_significance`
+
+##### Description
+
+This function assesses the statistical significance of the "elbow point" for a specific number of clusters (k_test) in clustering analysis by comparing the slope change at k_test with a distribution of slope changes generated from randomized data.
+
+##### Inputs
+
+- **`data`:**
+A dataframe containing the features (effect size profiles) to be clustered.
+
+- **`k_test`:**
+The specific number of clusters (k) to test for significance. Must be greater than or equal to 2.
+
+- **`nr`:**
+The number of randomizations to perform for generating the null distribution of slope changes.
+
+- **`cluster_method`:**
+The clustering method to use. Possible values:
+
+  - "Agglomerate": Agglomerative clustering.
+  - "Kmeans": K-means clustering.
+  - alpha: Significance level (e.g., 0.05) for testing the null hypothesis that the slope change at k_test is not significant.
 
 ### 6. Visualisation of the clusters in the effect size space using two principal components
 
