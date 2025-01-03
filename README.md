@@ -35,7 +35,7 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 ### 2. Building a cover of the covariate space with gliding windows
 This is achieved through the functions `window_parameters` and `Homogeneous_Windows`
 
-#### Function: `window_parameters`
+#### 2.1. Function: `window_parameters`
 
 ##### Description
 This function calculates the dimensions (`L`) and gliding steps (`Delta`) of the gliding windows based on the data distribution. These parameters or other set by the analyst are used as input for the `Homogeneous_Windows` function to systematically explore the covariate space.  
@@ -64,7 +64,7 @@ print("Window Dimensions (L):", L)
 print("Gliding Steps (Delta):", Delta)
 ```
 
-### Function: `Homogeneous_Windows`
+### 2.2. Function: `Homogeneous_Windows`
 
 #### Description
 The `Homogeneous_Windows` function systematically divides a J-dimensional covariate space into gliding hyperrectangles (windows) of specified dimensions (`L_All`) and step sizes (`Delta_All`). This creates a grid-like structure that allows for the exploration of local heterogeneities in effect sizes.  
@@ -105,61 +105,174 @@ print("Number of Windows per Dimension (win_dim):", win_dim)
 print("Total Number of Windows:", n_windows)
 ```
 
-### Estimating the effect size profile (ESP)
+### 3. Estimating the effect size profile (ESP)
 
-#### Continuous outcome using linear regression
+# Function: `effect_windows`
 
-ESPClust provides three functions to deal with 1, 2 or 3 potential ESP modifiers:
+## Description
+The `effect_windows` function calculates effect sizes for exposures within windows defined across a covariate space. This is a flexible function that supports user-defined methods (`effsize_method`) for effect size estimation, allowing for various types of outcomes and modeling strategies. The windowing process is guided by modifier variables that define the dimensions of the covariate space.
 
+---
+
+## Inputs
+- **`data`**:  
+  A dataframe containing cleaned exposures, confounders, effect modifiers, and the outcome variable.
+
+- **`X_name`**:  
+  A list of column names in `data` corresponding to the exposures (predictors) for which effect sizes will be estimated.
+
+- **`Y_name`**:  
+  The name of the column in `data` corresponding to the outcome variable.
+
+- **`confound_names`**:  
+  A list of names of covariates to adjust for as confounders. These variables are accounted for in the effect size estimation.
+
+- **`modifier_names`**:  
+  A list of names of covariates defining the dimensions of the windows (effect modifiers). These modifiers determine how the covariate space is partitioned.
+
+- **`z0`**:  
+  A list of coordinates for the origin of each window in each modifier's dimension.
+
+- **`Lw`**:  
+  A list of lengths (dimensions) of the windows along each modifier dimension.
+
+- **`nmin`**:  
+  The minimum number of observations required within a window for effect sizes to be estimated. This ensures statistical reliability.
+
+- **`effsize_method`**:  
+  A user-specified function to calculate the effect size. The function must accept two arguments:  
+  1. `y`: The outcome variable.  
+  2. `xdf`: A dataframe containing confounders and the exposure of interest.  
+  It should return a single numeric value representing the effect size. Two examples are provided below:  
+  - **`effsize_lin`**: For linear regression-based effect sizes.  
+  - **`effsize_logit_odds`**: For logistic regression-based odds ratios.
+
+---
+
+## Outputs
+- **`esp_df`**:  
+  A dataframe summarizing the results for each window, with the following columns:
+  - `nobs`: The number of observations within the window.
+  - Modifier-specific columns:  
+    - `<modifier_name>_z0`: The origin coordinate of the window along the modifier.  
+    - `<modifier_name>_Lw`: The length of the window along the modifier.  
+  - Effect sizes: One column for each exposure variable in `X_name`, representing the scaled effect sizes within the window.
+
+---
+
+## Example Usage
+```python
+# Example data
+data = pd.DataFrame({
+    "Exposure1": np.random.normal(size=100),
+    "Exposure2": np.random.uniform(size=100),
+    "Outcome": np.random.randint(0, 2, size=100),
+    "Confounder1": np.random.normal(size=100),
+    "Modifier1": np.random.normal(size=100),
+    "Modifier2": np.random.uniform(size=100)
+})
+
+# Inputs
+X_name = ["Exposure1", "Exposure2"]
+Y_name = "Outcome"
+confound_names = ["Confounder1"]
+modifier_names = ["Modifier1", "Modifier2"]
+z0 = [[0, 0.5, 1.0], [0, 0.5, 1.0]]  # Example window origins
+Lw = [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]  # Example window lengths
+nmin = 10
+
+# Example using effsize_lin
+esp_df_lin = effect_windows(data, X_name, Y_name, confound_names, modifier_names, z0, Lw, nmin, effsize_lin)
+
+# Example using effsize_logit_odds
+esp_df_logit = effect_windows(data, X_name, Y_name, confound_names, modifier_names, z0, Lw, nmin, effsize_logit_odds)
 ```
-esp_df = effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
+
+# Function: `effsize_lin`
+
+## Description
+The `effsize_lin` function calculates the effect size of an exposure on an outcome using linear regression. The function assumes that the last column in the input dataframe (`xdf`) is the exposure variable of interest, while the other columns represent confounders.
+
+---
+
+## Inputs
+- **`y`**:  
+  The outcome variable (continuous or discrete). This can be a list, numpy array, or pandas Series.
+
+- **`xdf`**:  
+  A dataframe containing confounders and the exposure variable.  
+  - Each row corresponds to an observation.  
+  - The last column is treated as the exposure variable.
+
+---
+
+## Outputs
+- **`effsize`**:  
+  The regression coefficient of the exposure variable, representing its effect size.
+
+---
+
+## Example Usage
+```python
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression
+
+# Example input
+y = [10, 12, 14, 13, 15]
+xdf = pd.DataFrame({
+    "Confounder1": [1, 2, 3, 4, 5],
+    "Confounder2": [10, 11, 12, 13, 14],
+    "Exposure": [5, 6, 7, 8, 9]
+})
+
+# Calculate effect size
+effsize = effsize_lin(y, xdf)
+print(f"Effect size (linear regression): {effsize}")
 ```
 
+# Function: `effsize_logit_odds`
+
+## Description
+The `effsize_logit_odds` function calculates the odds ratio of an exposure on a binary outcome using logistic regression. The function assumes that the last column in the input dataframe (`xdf`) is the exposure variable of interest, while the other columns represent confounders.
+
+---
+
+## Inputs
+- **`y`**:  
+  The binary outcome variable (values should be 0 or 1). This can be a list, numpy array, or pandas Series.
+
+- **`xdf`**:  
+  A dataframe containing confounders and the exposure variable.  
+  - Each row corresponds to an observation.  
+  - The last column is treated as the exposure variable.
+
+---
+
+## Outputs
+- **`odds_ratio`**:  
+  The odds ratio of the exposure variable, representing its effect size on the binary outcome.
+
+---
+
+## Example Usage
+```python
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+
+# Example input
+y = [0, 1, 0, 1, 1]
+xdf = pd.DataFrame({
+    "Confounder1": [1, 2, 3, 4, 5],
+    "Confounder2": [10, 11, 12, 13, 14],
+    "Exposure": [5, 6, 7, 8, 9]
+})
+
+# Calculate odds ratio
+odds_ratio = effsize_logit_odds(y, xdf)
+print(f"Odds ratio (logistic regression): {odds_ratio}")
 ```
-esp_df = effect_windows2_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
-```
 
-```
-esp_df = effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
-```
-
-#### Binary outcome (two classes) using logistic regression
-
-ESPClust provides three functions to deal with 1, 2 or 3 potential ESP modifiers:
-
-```
-esp_df = effect_windows1_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
-```
-
-```
-esp_df = effect_windows2_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
-```
-
-```
-esp_df = effect_windows3_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin)
-```
-
-##### Inputs
-- `data` (similar to `featuresExtended`): A dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
-- `X_name`: List with the names of the columns in `data` corresponding to the exposures.
-- `Y_name`:  Names of the column in `data` corresponding to the outcome.
-- `confound_names`: List of names of covariates considered as confounders. The function will adjust for confounding effects for these variables within each window.
-- `modifier_names`: List of names of covariates to be explored as potential effect modifiers.
-- `z0`: List of coordinates of the origin of each window. 
-- `Lw`: List of dimensions of each window.
-- `nmin`: Minimum number of observations within a window for effect sizes to be estimated.
-
-##### Outputs
-`esp_df`:  A dataframe with a row for each window of the cover used to sample the covariate space. 
-
-For a given window, the datagrame gives the following columns:
-* `nobs`: Number of observations within the window.
-* `BMI_z0`: Origin of the window.
-* `BMI_Lw`: Length of the window.
-* M columns giving the effect sizes $\{e_m\}_{m=1}^M$ within the window for each metabolite.
-
-
-### Plotting the effect size for the cover windows of an exposure variable and a covariate
+### 4. Plotting the effect size for the cover windows of an exposure variable and a covariate
 
 ```
 Eff_size_Windows_plot(esp_df,variable,modifier,no_effect_value,errorbar)
