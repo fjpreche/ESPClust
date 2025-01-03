@@ -419,21 +419,38 @@ The clustering of windows involves two steps that are implemented with two funct
 index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall = Clustering_indices(features_df,kmax,cluster_method,plotYN)
 ```
 
+##### Description
+The Clustering_indices function evaluates clustering solutions for a range of cluster numbers (K) using multiple clustering quality indices: Calinski-Harabasz (CH), Davies-Bouldin (DB), Silhouette score, and the inertia elbow method. It identifies the optimal number of clusters based on these indices and provides an overall recommendation for the number of clusters (koptimal_overall). Optionally, it visualizes the indices as a function of K.
+
 ##### Inputs
-* `features_df`: Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
-* `kmax`: Maximum number of clusters to be explored.
-*  `cluster_method` ("Agglomerate" or "Kmeans"): Clustering method.
-* `plotYN` (Y/N): If set to "Y", a plot for each of the clustering measures as a function of the number of clusters is displayed.
+- **`features_df`**:
+Dataframe with the features (effect size profile) used to describe each element (window) to be clustered.
+- **`kmax`**:
+Maximum number of clusters to be explored.
+-  **`cluster_method`**:
+Clustering method  ("Agglomerate" or "Kmeans").
+- **`plotYN`** (Y/N):
+If set to "Y", a plot for each of the clustering measures as a function of the number of clusters is displayed.
 
 ##### Outputs
-* `index_vs_K_df`: A dataframe with the value of the clustering measures as a function of the number of clusters.
-* `KoptimalCH`: Number of clusters at the maximum of the Calinski-Harabasz measure.
-* `KoptimalDB`: Number of clusters at the maximum of the Davies-Bouldin measure.
-* `KoptimalSil`: Number of clusters at the maximum of the silhouette measure.
-* `KoptimalElbow`: Elbow of the inertia vs. the number of clusters.
-* `koptimal_overall`: Most frequently occurring value among the four clustering indices. If there is no repeated number across the indices or in case of a tie, we will use the smallest number of clusters. Agglomerative clustering will be used throughout the article.
+- **`index_vs_K_df`**:
+A dataframe with the value of the clustering measures as a function of the number of clusters.
+- **`KoptimalCH`**:
+Number of clusters at the maximum of the Calinski-Harabasz measure.
+- **`KoptimalDB`**:
+Number of clusters at the maximum of the Davies-Bouldin measure.
+- **`KoptimalSil`**:
+Number of clusters at the maximum of the silhouette measure.
+- **`KoptimalElbow`**:
+Elbow of the inertia vs. the number of clusters.
+- **`koptimal_overall`**:
+Most frequently occurring value among the four clustering indices. If there is no repeated number across the indices or in case of a tie, we will use the smallest number of clusters. Agglomerative clustering will be used throughout the article.
 
 #### Function `Elbow_significance`
+
+```
+slope_change_at_k, percentile, p_value, koptimal_overall_2, reject_null = Elbow_significance(data, k_test, nr, cluster_method, alpha)
+```
 
 ##### Description
 
@@ -455,7 +472,29 @@ The clustering method to use. Possible values:
 
   - "Agglomerate": Agglomerative clustering.
   - "Kmeans": K-means clustering.
-  - alpha: Significance level (e.g., 0.05) for testing the null hypothesis that the slope change at k_test is not significant.
+
+- **`alpha`:**
+Significance level (e.g., 0.05) for testing the null hypothesis that the slope change at k_test is not significant.
+
+##### Outputs
+
+- **`slope_change_at_k`:**
+The observed slope change for the given k_test from the original dataset.
+
+- **`percentile`:**
+The critical value (percentile) of the slope change distribution at the given significance level (1 - alpha).
+
+- **`p_value`:**
+The p-value for the observed slope change at k_test, indicating the proportion of randomized slope changes greater than or equal to the observed value.
+
+- **`koptimal_overall_2`:**
+Indicates whether k_test is considered the optimal number of clusters:
+
+  - k_test: If the null hypothesis is rejected (the observed slope change is significant).
+  - 1: If the null hypothesis is not rejected.
+
+- **`reject_null`:**
+Boolean value (True/False) indicating whether the null hypothesis was rejected for the given k_test.
 
 ### 6. Visualisation of the clusters in the effect size space using two principal components
 
