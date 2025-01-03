@@ -76,9 +76,9 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
 
 4. **Feature Transformation**:  
    - If `featTransform` is `Plus1Log`, applies the transformation:  
-     \[
+     $$
      \text{transformed\_feature} = \log(\text{feature} + 1)
-     \]
+     $$
 
 5. **Scaling**:  
    - Standardizes all features (z-score normalization).
