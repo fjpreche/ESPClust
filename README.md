@@ -75,10 +75,7 @@ The `data_cleaning` function preprocesses and cleans a dataset of exposures, out
    - Performs nearest neighbors imputation on remaining missing values using the specified `k_neighbours`.
 
 4. **Feature Transformation**:  
-   - If `featTransform` is `Plus1Log`, applies the transformation:  
-     $$
-     \text{transformed\_feature} = \log(\text{feature} + 1)
-     $$
+   - If `featTransform` is `Plus1Log`, applies the transformation: $\text{transformed\_feature} = \log(\text{feature} + 1)$
 
 5. **Scaling**:  
    - Standardizes all features (z-score normalization).
