@@ -30,7 +30,6 @@ featuresExtended, exposure_names = data_cleaning(featuresIn,Yin,otherVariables,a
 #### Outputs
 - `featuresExtended`: a dataframe with cleaned exposures together with columns from the `otherVariables` dataset and the `outcome` variable.
 - `exposure_names`: Names of the exposures that were kept after cleaning.
-- 
 
 ### 2. Building a cover of the covariate space with gliding windows
 This is achieved through the functions `window_parameters` and `Homogeneous_Windows`
