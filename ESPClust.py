@@ -23,13 +23,21 @@ from sklearn.cluster import KMeans
 
 from sklearn.impute import KNNImputer
 
+from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+
 from statsmodels.stats.multitest import multipletests
 
 from collections import Counter
 
+from scipy.spatial import distance
+
 import warnings
 warnings.filterwarnings('ignore')
 
+from functools import reduce
+
+from scipy.spatial.distance import pdist
 
 def data_cleaning(featuresIn,Yin,otherVariables,annotation,thmissing,k_neighbours,featTransform,plotYN):
     features = featuresIn
@@ -42,7 +50,7 @@ def data_cleaning(featuresIn,Yin,otherVariables,annotation,thmissing,k_neighbour
         missingFeatures = features.isnull().sum()/len(features)
         missingObservations = features.isnull().T.sum()/len(features.T)
 
-        if plotYN == 'y':
+        if plotYN == 'Y':
             # Visualising the missing values 
             plt.figure()
             plt.imshow(features.isnull().T,cmap='Greys',  interpolation='nearest')
@@ -219,15 +227,93 @@ def LinSignificance(dataX,dataY,confounders,alphasig,plot_yn):
     return pvtlr,siglr,pvalBH,sigBH0,beta,ciL,ciH
 
 
-# Defining functions with separation Delta_All between their origin and width L_All
-def Homogeneous_Windows(data,modifier_names,L_All,Delta_All):
+def window_parameters(data1,nmin=10,CL=0.95):
+
+    if not (0 <= CL <= 1):
+        raise ValueError(f"The value of 'CL' should be between 0 and 1.")
+
+    Kmin = nmin-1
+    #print("Minimal number of neighbours:", Kmin)
+
+    explore_names=data1.columns
+
+    scaler = StandardScaler().fit(data1)
+    scaled_data1 = scaler.transform(data1)
+    
+    Lwindow=np.zeros([len(data1),len(explore_names)])
+    dmin=np.zeros(len(explore_names))+1.0e7
+    dminlist=np.zeros([len(data1),len(explore_names)])
+    i = 0
+    for ir in list(data1.index):#range(len(data1)):
+        reference_point = scaled_data1[i]
+    
+        # Calculate the Euclidean distances between the reference point and all other points
+        distances = np.linalg.norm(scaled_data1 - reference_point, axis=1)
+        
+        # Get the indices of the 10 smallest distances (ignoring the first point itself which has a distance of 0)
+        closest_indices = np.argsort(distances)[1:(Kmin+1)]
+        
+        #print(closest_indices)
+        
+        for j in range(len(explore_names)):
+            ic=list(data1.index)[closest_indices[0]]
+
+            # Debugging check
+            #print("Index i:", i, "Index ir:", ir, "Closest index ic:", ic, "Feature:", explore_names[j])
+ 
+            #print(data1[explore_names[j]])
+            #print([data1[explore_names[j]][ic],data1[explore_names[j]][ir]])
+            diff=np.abs(data1[explore_names[j]][ic]-data1[explore_names[j]][ir])
+           
+            dminlist[i,j]=diff
+            if diff<dmin[j]:
+                dmin[j]=diff
+            
+        dtemp = data1.iloc[closest_indices]
+         
+        a=np.array([dtemp.min(),dtemp.max()])
+        #Lwindow[i,0]=a[1,0]-a[0,0]
+        #Lwindow[i,1]=a[1,1]-a[0,1]
+        
+        for j in range(len(explore_names)):
+            Lwindow[i,j]=a[1,j]-a[0,j]
+
+        i=i+1
+
+    L=[]
+    for i in range(len(explore_names)):
+        L.append(np.quantile(Lwindow[:,i],CL))
+
+    Delta=[]
+    for i in range(len(explore_names)):
+        Delta.append(np.min(Lwindow[:,i]))
+
+    dmin1d=[]  # minimal distance between points in each dimension
+    for i in range(len(explore_names)):
+        array = np.array(data1[explore_names[i]])
+        # Calculate all pairwise distances
+        distances = pdist(array.reshape(-1, 1))
+        # Find the smallest non-zero distance
+        min_nonzero_distance = np.min(distances[distances > 0])
+        dmin1d.append(min_nonzero_distance)
+
+        
+    return L,Delta
+
+
+# Defining gliding windows with separation Delta_All between their origin and width L_All
+def Homogeneous_Windows(data,modifier_names,L_All,Delta_All,var_type):
     z0 = [0 for m in range(len(Delta_All))]
     Lw = [0 for m in range(len(Delta_All))]
 
     for m in range(len(Delta_All)):
         z = data[modifier_names[m]]
         zmin = np.min(z)
+        if var_type[m] == 'c':
+            zmin = np.min(z)-L_All[m]/2
         zmax = np.max(z)
+        if var_type[m] == 'c':
+            zmax = np.max(z)-L_All[m]/2
 
         Delta_t = Delta_All[m]
         L0 = L_All[m]
@@ -243,7 +329,10 @@ def Homogeneous_Windows(data,modifier_names,L_All,Delta_All):
         z0[m] = wtemp
         Lw[m] = [L0 for i in range(len(wtemp))]
         
-    return z0,Lw
+    win_dim = [len(sublist) for sublist in Lw]
+    n_windows = reduce(lambda x, y: x * y, win_dim)
+     
+    return z0,Lw,win_dim,n_windows
 
 
 # A function to find the intersection of a list listarrays of 2 or more arrays
@@ -257,56 +346,54 @@ def intersectMultiple(listarrays):
 #aux = [np.array([1,2,3,4]),np.array([2,3,4,5]),np.array([3,4,5,6])]
 #intersectMultiple(aux)
 
-# Rows from data that satisfy the conditions for a window = [window z1, window z2, ....] (a list of length equal to the number of modifiers)
-def selectedIndex(data,i_window,modifier_names,z0,Lw):
-    #print(z0)
-    #print(w_l)
-    listarrays = []
-    for m in range(len(modifier_names)):
-        i = i_window[m]
-        zL = z0[m][i]
-        zH = zL+Lw[m][i]
-        var = modifier_names[m]
-        log = (data[var]>=zL) & (data[var]<zH)
-        listarrays.append(np.array([i for i, x in enumerate(log) if x]))
-    return intersectMultiple(listarrays)
 
 
+def selectedIndex(data, i_window, modifier_names, z0, Lw):
+    positions = np.ones(len(data), dtype=bool)  # Start with all True (include all rows)
 
-# Function to calculate window-dependent effect sizes (odds ratios). One effect modifier. Linear regression
-def effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
+    for i, mod in enumerate(modifier_names):
+        lower_bound = z0[i][i_window[i]]
+        upper_bound = lower_bound + Lw[i][i_window[i]]
+
+        # Update positions to select rows where the modifier is within the window
+        positions &= (data[mod] >= lower_bound) & (data[mod] < upper_bound)
     
-    Eff_table_1d = np.zeros([len(z0[0]),len(X_name)])
+    return positions
+
+# Define the main function for effect windows
+def effect_windows(data, X_name, Y_name, confound_names, modifier_names, z0, Lw, nmin, effsize_method):
+    n_modifiers = len(modifier_names)
+    Eff_table_1d = np.zeros([np.prod([len(z) for z in z0]), len(X_name)])
 
     for ix in range(len(X_name)):
         xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
+        print(f'Variable {ix + 1} of {len(X_name)}, {xvar}')
 
         nobs = []
-        oddsr_list = []
+        effsize_list = []
 
-        w00_list = []
-        m0_list = []
-        Lw0_list = []
-        
+        # Dynamic lists for each modifier
+        modifier_z0_list = [[] for _ in range(n_modifiers)]
+        modifier_Lw_list = [[] for _ in range(n_modifiers)]
+
         index_1d_list = []
         index_1d = 0
-        for m0 in range(len(z0[0])):
-            i_window = [m0]
 
-            #print(i_window)
-
-            positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-            indsel = data.index[positions]  # using the position list to select indices from data
-
+        # Handle any number of modifiers using a recursive loop
+        for i_window in np.ndindex(*[len(z) for z in z0]):
+            positions = list(selectedIndex(data, i_window, modifier_names, z0, Lw))
+            indsel = data.index[positions]
             frange = data.loc[indsel]
 
-            if len(frange)>nmin:
+            if len(frange) > nmin:
                 index_1d_list.append(index_1d)
-                ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                w00_list.append(ow0)
 
-                #print(len(frange))
+                for i_mod in range(n_modifiers):
+                    ow = z0[i_mod][i_window[i_mod]]
+                    modifier_z0_list[i_mod].append(ow)
+                    modifier_Lw_list[i_mod].append(Lw[i_mod][i_window[i_mod]])
+
+                # Prepare the data for effsize calculation
                 temp = frange[xvar]
                 x0 = np.transpose(np.array(temp)).flatten()
                 y = list(frange[Y_name])
@@ -314,530 +401,57 @@ def effect_windows1_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,n
                 xdf = frange[confound_names]
                 xdf['x'] = list(x0)
 
-                nf = xdf.columns
-                x = np.array(xdf)
-                if len(nf) == 1:
-                    x = x.reshape(-1,1)
-
-                scaler = StandardScaler().fit(x)
-                x_scaled = scaler.transform(x)
-                xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                log_reg = smapi.OLS(y,xs).fit(disp=0)
-
-                beta = log_reg.params.values[-1]
-
-                Eff_table_1d[index_1d,ix] = beta
+                # Calculate effsize with the given method
+                effsize = effsize_method(y, xdf)
+                Eff_table_1d[index_1d, ix] = effsize
 
                 nobs.append(len(frange))
-                oddsr_list.append(beta)
-                m0_list.append(m0)
-                Lw0_list.append(Lw[0][m0])
-                
-            index_1d = index_1d+1
-                
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
 
-    cols = list(X_name)
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
+            index_1d += 1
+
+    Eff_table_1d_temp = Eff_table_1d[index_1d_list, :]
+
+    # - scaling the effect sizes
+    scaler = StandardScaler().fit(Eff_table_1d_temp)
+    Eff_table_1d = scaler.transform(Eff_table_1d_temp)
     
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
+    # Dynamically create columns for each modifier's z0 and Lw
+    cols = list(X_name)
+    for i_mod in range(n_modifiers):
+        cols.insert(0, modifier_names[i_mod] + '_Lw')
+        cols.insert(0, modifier_names[i_mod] + '_z0')
+    cols.insert(0, "nobs")
+
+    esp_df = pd.DataFrame(Eff_table_1d, columns=X_name)
     esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
+
+    # Add z0 and Lw values for each modifier
+    for i_mod in range(n_modifiers):
+        esp_df[modifier_names[i_mod] + '_z0'] = modifier_z0_list[i_mod]
+        esp_df[modifier_names[i_mod] + '_Lw'] = modifier_Lw_list[i_mod]
 
     esp_df = esp_df[cols]
-    
     return esp_df
 
-# Function to calculate window-dependent effect sizes (odds ratios). One effect modifier. Logistic regression
-def effect_windows1_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
+# Define a linear regression-based effsize method
+def effsize_lin(y, xdf):
+    scaler = StandardScaler().fit(xdf)
+    x_scaled = scaler.transform(xdf)
+    model = LinearRegression().fit(x_scaled, y)
+    effsize = model.coef_[-1]  # Use the last coefficient as effsize for X
+    return effsize
+
+def effsize_logit_odds(y, xdf):
+    # Scale the features
+    scaler = StandardScaler().fit(xdf)
+    x_scaled = scaler.transform(xdf)
     
-    Eff_table_1d = np.zeros([len(z0[0]),len(X_name)])
-
-    for ix in range(len(X_name)):
-        xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
-
-        nobs = []
-        oddsr_list = []
-
-        w00_list = []
-        m0_list = []
-        Lw0_list = []
-        
-        index_1d_list = []
-        index_1d = 0
-        for m0 in range(len(z0[0])):
-            i_window = [m0]
-
-            #print(i_window)
-
-            positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-            indsel = data.index[positions]  # using the position list to select indices from data
-
-            frange = data.loc[indsel]
-
-            if len(frange)>nmin:
-                index_1d_list.append(index_1d)
-                ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                w00_list.append(ow0)
-
-                #print(len(frange))
-                temp = frange[xvar]
-                x0 = np.transpose(np.array(temp)).flatten()
-                y = list(frange[Y_name])
-
-                xdf = frange[confound_names]
-                xdf['x'] = list(x0)
-
-                nf = xdf.columns
-                x = np.array(xdf)
-                if len(nf) == 1:
-                    x = x.reshape(-1,1)
-
-                scaler = StandardScaler().fit(x)
-                x_scaled = scaler.transform(x)
-                xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                log_reg = smapi.Logit(y,xs).fit(disp=0)
-
-                beta = log_reg.params.values[-1]
-                ciL = log_reg.params.values[-1]-log_reg.conf_int()[0][-1]
-                ciH = log_reg.conf_int()[1][-1]-log_reg.params.values[-1]
-                oddsr = np.exp(log_reg.params.values[-1])
-
-                Eff_table_1d[index_1d,ix] = oddsr
-
-                nobs.append(len(frange))
-                oddsr_list.append(beta)
-                m0_list.append(m0)
-                Lw0_list.append(Lw[0][m0])
-                
-            index_1d = index_1d+1
-                
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
-
-    cols = list(X_name)
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
+    # Fit logistic regression model
+    model = LogisticRegression().fit(x_scaled, y)
+    # Get the coefficient for the predictor variable of interest (last column in this case)
+    odds_ratio = np.exp(model.coef_[0][-1])  # Exponentiate to get odds ratio
     
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
-    esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
-
-    esp_df = esp_df[cols]
-    
-    
-    return esp_df
-
-
-# Function to calculate window-dependent effect sizes (odds ratios). Linear regression
-def effect_windows2_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
-    
-    Eff_table_1d = np.zeros([len(z0[0])*len(z0[1]),len(X_name)])
-
-    for ix in range(len(X_name)):
-        xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
-
-        nobs = []
-        oddsr_list = []
-
-        w00_list = []
-        w01_list = []
-        m0_list = []
-        m1_list = []
-        Lw0_list = []
-        Lw1_list = []
-        
-        index_1d_list = []
-        index_1d = 0
-        for m0 in range(len(z0[0])):
-        #for m0 in range(3):
-            for m1 in range(len(z0[1])):
-                i_window = [m0,m1]
-
-                #print(i_window)
-
-                positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-                indsel = data.index[positions]  # using the position list to select indices from data
-
-                frange = data.loc[indsel]
-
-                if len(frange)>nmin:
-                    index_1d_list.append(index_1d)
-                    ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                    w00_list.append(ow0)
-                    ow1 = z0[1][m1] # 2nd coordinate of Origin of window m1,m2
-                    w01_list.append(ow1)
-                        
-                    #print(len(frange))
-                    temp = frange[xvar]
-                    x0 = np.transpose(np.array(temp)).flatten()
-                    y = list(frange[Y_name])
-
-                    xdf = frange[confound_names]
-                    xdf['x'] = list(x0)
-
-                    nf = xdf.columns
-                    x = np.array(xdf)
-                    if len(nf) == 1:
-                        x = x.reshape(-1,1)
-
-                    scaler = StandardScaler().fit(x)
-                    x_scaled = scaler.transform(x)
-                    xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                    log_reg = smapi.OLS(y,xs).fit(disp=0)
-
-                    beta = log_reg.params.values[-1]
-
-                    Eff_table_1d[index_1d,ix] = beta
-
-                    nobs.append(len(frange))
-                    oddsr_list.append(beta)
-                    m0_list.append(m0)
-                    m1_list.append(m1)
-                    Lw0_list.append(Lw[0][m0])
-                    Lw1_list.append(Lw[1][m1])
-                    
-                index_1d = index_1d+1
-                    
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
-
-    cols = list(X_name)
-    cols.insert(0,modifier_names[1]+'_Lw')
-    cols.insert(0,modifier_names[1]+'_z0')
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
-    
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
-    esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
-    esp_df[modifier_names[1]+'_z0'] = w01_list
-    esp_df[modifier_names[1]+'_Lw'] = Lw1_list
-    esp_df = esp_df[cols]
-        
-    return esp_df
-
-
-# Function to calculate window-dependent effect sizes (odds ratios). Logistic regression
-def effect_windows2_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
-    
-    Eff_table_1d = np.zeros([len(z0[0])*len(z0[1]),len(X_name)])
-
-    for ix in range(len(X_name)):
-        xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
-
-        nobs = []
-        oddsr_list = []
-        oddsrciL_list = []
-        oddsrciH_list = []
-
-        w00_list = []
-        w01_list = []
-        m0_list = []
-        m1_list = []
-        Lw0_list = []
-        Lw1_list = []
-        
-        index_1d_list = []
-        index_1d = 0
-        for m0 in range(len(z0[0])):
-        #for m0 in range(3):
-            for m1 in range(len(z0[1])):
-                i_window = [m0,m1]
-
-                #print(i_window)
-
-                positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-                indsel = data.index[positions]  # using the position list to select indices from data
-
-                frange = data.loc[indsel]
-
-                if len(frange)>nmin:
-                    index_1d_list.append(index_1d)
-                    ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                    w00_list.append(ow0)
-                    ow1 = z0[1][m1] # 2nd coordinate of Origin of window m1,m2
-                    w01_list.append(ow1)
-                        
-                    #print(len(frange))
-                    temp = frange[xvar]
-                    x0 = np.transpose(np.array(temp)).flatten()
-                    y = list(frange[Y_name])
-
-                    xdf = frange[confound_names]
-                    xdf['x'] = list(x0)
-
-                    nf = xdf.columns
-                    x = np.array(xdf)
-                    if len(nf) == 1:
-                        x = x.reshape(-1,1)
-
-                    scaler = StandardScaler().fit(x)
-                    x_scaled = scaler.transform(x)
-                    xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                    log_reg = smapi.Logit(y,xs).fit(disp=0)
-
-                    beta = log_reg.params.values[-1]
-                    oddsr = np.exp(log_reg.params.values[-1])
-
-                    Eff_table_1d[index_1d,ix] = oddsr
-
-                    nobs.append(len(frange))
-                    oddsr_list.append(beta)
-                    m0_list.append(m0)
-                    m1_list.append(m1)
-                    Lw0_list.append(Lw[0][m0])
-                    Lw1_list.append(Lw[1][m1])
-                    
-                index_1d = index_1d+1
-                    
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
-
-    cols = list(X_name)
-    cols.insert(0,modifier_names[1]+'_Lw')
-    cols.insert(0,modifier_names[1]+'_z0')
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
-    
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
-    esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
-    esp_df[modifier_names[1]+'_z0'] = w01_list
-    esp_df[modifier_names[1]+'_Lw'] = Lw1_list
-    esp_df = esp_df[cols]
-        
-    return esp_df
-
-
-# Function to calculate window-dependent effect sizes 
-# 3 effect modifiers - Linear regression
-def effect_windows3_lin(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
-    Eff_table_1d = np.zeros([len(z0[0])*len(z0[1])*len(z0[2]),len(X_name)])
-    
-    for ix in range(len(X_name)):
-        xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
-
-        nobs = []
-        oddsr_list = []
-        oddsrciL_list = []
-        oddsrciH_list = []
-
-        w00_list = []
-        w01_list = []
-        w02_list = []
-        m0_list = []
-        m1_list = []
-        m2_list = []
-        Lw0_list = []
-        Lw1_list = []
-        Lw2_list = []
-        
-        index_1d_list = []
-        index_1d = 0
-        for m0 in range(len(z0[0])):
-        #for m0 in range(3):
-            for m1 in range(len(z0[1])):
-                for m2 in range(len(z0[2])):
-                    i_window = [m0,m1,m2]
-
-                    #print(i_window)
-
-                    positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-                    indsel = data.index[positions]  # using the position list to select indices from data
-
-                    frange = data.loc[indsel]
-
-                    if len(frange)>nmin:
-                        index_1d_list.append(index_1d)
-                        ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                        w00_list.append(ow0)
-                        ow1 = z0[1][m1] # 2nd coordinate of Origin of window m1,m2
-                        w01_list.append(ow1)
-                        ow2 = z0[2][m2] # 2nd coordinate of Origin of window m1,m2
-                        w02_list.append(ow2)
-        
-                        #print(len(frange))
-                        temp = frange[xvar]
-                        x0 = np.transpose(np.array(temp)).flatten()
-                        y = list(frange[Y_name])
-
-                        xdf = frange[confound_names]
-                        xdf['x'] = list(x0)
-
-                        nf = xdf.columns
-                        x = np.array(xdf)
-                        if len(nf) == 1:
-                            x = x.reshape(-1,1)
-
-                        scaler = StandardScaler().fit(x)
-                        x_scaled = scaler.transform(x)
-                        xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                        log_reg = smapi.OLS(y,xs).fit(disp=0)
-
-                        beta = log_reg.params.values[-1]
-                        oddsr = np.exp(log_reg.params.values[-1])
-
-                        Eff_table_1d[index_1d,ix] = beta
-                        
-                        #print(oddsr)
-
-                        nobs.append(len(frange))
-                        oddsr_list.append(oddsr)
-                        m0_list.append(m0)
-                        m1_list.append(m1)
-                        m2_list.append(m2)
-                        Lw0_list.append(Lw[0][m0])
-                        Lw1_list.append(Lw[1][m1])
-                        Lw2_list.append(Lw[2][m2])
-    
-                    index_1d = index_1d+1
-    
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
-    
-    cols = list(X_name)
-    cols.insert(0,modifier_names[2]+'_Lw')
-    cols.insert(0,modifier_names[2]+'_z0')
-    cols.insert(0,modifier_names[1]+'_Lw')
-    cols.insert(0,modifier_names[1]+'_z0')
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
-    
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
-    esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
-    esp_df[modifier_names[1]+'_z0'] = w01_list
-    esp_df[modifier_names[1]+'_Lw'] = Lw1_list
-    esp_df[modifier_names[2]+'_z0'] = w02_list
-    esp_df[modifier_names[2]+'_Lw'] = Lw2_list    
-    esp_df = esp_df[cols]
-    
-    
-    return esp_df
-
-# Function to calculate window-dependent effect sizes 
-# 3 effect modifiers - Logistic regression
-def effect_windows3_LR(data,X_name,Y_name,confound_names,modifier_names,z0,Lw,nmin):
-    Eff_table_1d = np.zeros([len(z0[0])*len(z0[1])*len(z0[2]),len(X_name)])
-    
-    for ix in range(len(X_name)):
-        xvar = X_name[ix]
-        print('Variable '+str(ix+1)+' of '+str(len(X_name))+', '+xvar)
-
-        nobs = []
-        oddsr_list = []
-
-        w00_list = []
-        w01_list = []
-        w02_list = []
-        m0_list = []
-        m1_list = []
-        m2_list = []
-        Lw0_list = []
-        Lw1_list = []
-        Lw2_list = []
-        
-        index_1d_list = []
-        index_1d = 0
-        for m0 in range(len(z0[0])):
-        #for m0 in range(3):
-            for m1 in range(len(z0[1])):
-                for m2 in range(len(z0[2])):
-                    i_window = [m0,m1,m2]
-
-                    #print(i_window)
-
-                    positions = list(selectedIndex(data,i_window,modifier_names,z0,Lw))
-                    indsel = data.index[positions]  # using the position list to select indices from data
-
-                    frange = data.loc[indsel]
-
-                    if len(frange)>nmin:
-                        index_1d_list.append(index_1d)
-                        ow0 = z0[0][m0] # 1st coordinate of Origin of window m1,m2
-                        w00_list.append(ow0)
-                        ow1 = z0[1][m1] # 2nd coordinate of Origin of window m1,m2
-                        w01_list.append(ow1)
-                        ow2 = z0[2][m2] # 2nd coordinate of Origin of window m1,m2
-                        w02_list.append(ow2)
-        
-                        #print(len(frange))
-                        temp = frange[xvar]
-                        x0 = np.transpose(np.array(temp)).flatten()
-                        y = list(frange[Y_name])
-
-                        xdf = frange[confound_names]
-                        xdf['x'] = list(x0)
-
-                        nf = xdf.columns
-                        x = np.array(xdf)
-                        if len(nf) == 1:
-                            x = x.reshape(-1,1)
-
-                        scaler = StandardScaler().fit(x)
-                        x_scaled = scaler.transform(x)
-                        xs = pd.DataFrame(data=x_scaled, columns=xdf.columns)
-
-                        log_reg = smapi.Logit(y,xs).fit(disp=0)
-
-                        beta = log_reg.params.values[-1]
-                        oddsr = np.exp(log_reg.params.values[-1])
-
-                        Eff_table_1d[index_1d,ix] = beta
-                        
-                        #print(oddsr)
-
-                        nobs.append(len(frange))
-                        oddsr_list.append(oddsr)
-                        m0_list.append(m0)
-                        m1_list.append(m1)
-                        m2_list.append(m2)
-                        Lw0_list.append(Lw[0][m0])
-                        Lw1_list.append(Lw[1][m1])
-                        Lw2_list.append(Lw[2][m2])
-    
-                    index_1d = index_1d+1
-    
-    Eff_table_1d = Eff_table_1d[index_1d_list,:]
-    
-    cols = list(X_name)
-    cols.insert(0,modifier_names[2]+'_Lw')
-    cols.insert(0,modifier_names[2]+'_z0')
-    cols.insert(0,modifier_names[1]+'_Lw')
-    cols.insert(0,modifier_names[1]+'_z0')
-    cols.insert(0,modifier_names[0]+'_Lw')
-    cols.insert(0,modifier_names[0]+'_z0')
-    cols.insert(0,"nobs")
-    
-    esp_df = pd.DataFrame(Eff_table_1d,columns=X_name)
-    esp_df['nobs'] = nobs
-    esp_df[modifier_names[0]+'_z0'] = w00_list
-    esp_df[modifier_names[0]+'_Lw'] = Lw0_list
-    esp_df[modifier_names[1]+'_z0'] = w01_list
-    esp_df[modifier_names[1]+'_Lw'] = Lw1_list
-    esp_df[modifier_names[2]+'_z0'] = w02_list
-    esp_df[modifier_names[2]+'_Lw'] = Lw2_list    
-    esp_df = esp_df[cols]
-    
-    
-    return esp_df
+    return odds_ratio
 
 
 # Plot of the effect size as a function of windows for an effect modifier mod_name
@@ -980,15 +594,176 @@ def Clustering_indices(features_df,kmax,cluster_method,plotYN):
     
     arr = [KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow]
     
+    # Count occurrences of each k in the array
     a = Counter(arr).most_common(2)
     
-    koptimal_overall = a[0][0]
-    if a[0][1] == 1:
+    # Set a default value for koptimal_overall
+    koptimal_overall = a[0][0]  # Default to the most common k
+    
+    # Handle cases where there are fewer than two distinct values in `a`
+    if len(a) > 1 and a[1][1] == 2:  # Check if the second most common value exists and is tied
         koptimal_overall = min(arr)
-    if a[1][1] == 2:
+    elif a[0][1] == 1:  # Check if the most common value occurs only once
         koptimal_overall = min(arr)
-
+    
     return index_vs_K_df,KoptimalCH,KoptimalDB,KoptimalSil,KoptimalElbow,koptimal_overall
+
+def shuffle_dataframe_elements(df, random_state=None):
+    """
+    Randomly shuffle all elements in a DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame to shuffle.
+        random_state (int, optional): Seed for reproducibility.
+
+    Returns:
+        pd.DataFrame: DataFrame with shuffled elements.
+    """
+    # Flatten the DataFrame into a 1D array
+    flattened = df.values.flatten()
+    
+    # Shuffle the array
+    rng = np.random.default_rng(seed=random_state)
+    rng.shuffle(flattened)
+    
+    # Reshape back into the DataFrame's original shape
+    shuffled_df = pd.DataFrame(flattened.reshape(df.shape), columns=df.columns, index=df.index)
+    
+    return shuffled_df
+
+def shuffle_columns(df, random_state=None):
+    """
+    Randomly shuffle the elements within each column of a DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame to shuffle.
+        random_state (int, optional): Seed for reproducibility.
+
+    Returns:
+        pd.DataFrame: DataFrame with columns shuffled independently.
+    """
+    rng = np.random.default_rng(seed=random_state)
+    shuffled_df = df.apply(lambda col: rng.permutation(col).tolist(), axis=0)
+    
+    return shuffled_df
+
+def shuffle_rows(df, random_state=None):
+    """
+    Randomly shuffle the elements within each row of a DataFrame.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame to shuffle.
+        random_state (int, optional): Seed for reproducibility.
+
+    Returns:
+        pd.DataFrame: DataFrame with rows shuffled independently.
+    """
+    rng = np.random.default_rng(seed=random_state)
+    # Apply shuffle to each row and stack back into a DataFrame
+    shuffled_array = np.apply_along_axis(rng.permutation, axis=1, arr=df.values)
+    return pd.DataFrame(shuffled_array, columns=df.columns, index=df.index)
+
+def data_random(data):
+    n_samples, n_features = data.shape
+    feature_min = np.min(data, axis=0)
+    feature_max = np.max(data, axis=0)
+    reference_data = np.random.uniform(feature_min, feature_max, size=(n_samples, n_features))
+    return reference_data
+
+def Inertia_k(features_df,kmax,cluster_method):
+    scaler = StandardScaler().fit(features_df) # Define a standardisation scaler
+    x_scaled = scaler.transform(features_df) # Transform the data.
+
+    import random
+    random.seed(2)
+    
+    inertia = [] #Scree plot
+    K_range2 = range(1, kmax)
+
+    for k in K_range2:
+        if cluster_method == "Kmeans":
+            inicentroids = [] #np.zeros(n_clusters)
+            delta = int(len(x_scaled)/k)
+            for i in range(k):
+                inicentroids.append(list(x_scaled[i*delta]))
+            kmeans = KMeans(n_clusters = k, init=np.array(inicentroids))
+
+        if cluster_method == "Agglomerate":
+            kmeans = AgglomerativeClustering(n_clusters = k)
+        
+        kmeans.fit(x_scaled)
+        labels = kmeans.labels_
+
+        centres = np.zeros((k,np.shape(x_scaled)[1]))
+        for i in range(np.shape(centres)[0]):
+            c = np.mean(x_scaled[labels==i],axis=0)
+            for j in range(np.shape(centres)[1]):
+                centres[i,j] = c[j]
+        inertia0=0
+        for c in range(k):
+            error = 0.0
+            for i in range(len(x_scaled[labels==c])):
+                error = error + np.sum((x_scaled[labels==c][i]-centres[c])**2)
+            inertia0 = inertia0+error
+
+        inertia.append(inertia0)
+
+    slope = [inertia[k]-inertia[k-1] for k in range(1,len(inertia))]
+    k_values = np.array([k for k in range(2,len(slope)+1)])
+    slope_change = np.array([slope[k]/slope[k+1]-1 for k in range(len(slope)-1)])
+
+    return inertia,slope,slope_change,k_values
+
+
+def Elbow_significance(data, k_test, nr, cluster_method, alpha):
+    
+    # Compute inertia, slopes, and slope changes for the original data
+    kmax = k_test+3
+    inertia0, slope0, slope_change0, k_values0 = Inertia_k(data, kmax, cluster_method)
+
+    # Index of the specific k to test (adjusting for Python 0-based indexing)
+    k_index = k_test - 2  # Since slope_change corresponds to k values from 2 to kmax
+    
+    # Initialize variables for randomisation
+    slope_change_distribution = np.zeros(nr)
+    
+    for r in range(nr):
+        # Shuffle data for randomization
+        features_df = data_random(data)  # Replace with appropriate shuffle function
+        
+        # Compute inertia, slopes, and slope changes for the randomized data
+        kmax = k_test+3
+        inertia, slope, slope_change, k_values = Inertia_k(features_df, kmax, cluster_method)
+        
+        # Store the slope_change value for this random sample at the specific k
+        slope_change_distribution[r] = slope_change[k_index]
+    
+    # Calculate the mean and standard deviation for the slope change
+    mean_slope_change = np.mean(slope_change_distribution)
+    sd_slope_change = np.std(slope_change_distribution, ddof=1)
+    
+    # Calculate the percentile for significance
+    percentile = np.percentile(slope_change_distribution, 100 * (1 - alpha))
+    
+    # Calculate the p-value for the specific slope change
+    p_value = np.mean(slope_change_distribution >= slope_change0[k_index])
+    
+    # Determine whether to reject the null hypothesis
+    #reject_null = slope_change0[k_index] > percentile
+    reject_null = p_value < alpha
+    
+    # Ensure the index is within bounds
+    if 2 <= k_test <= len(slope_change0) + 1:
+        if reject_null:
+            koptimal_overall_2 = k_test
+        else:
+            koptimal_overall_2 = 1
+    else:
+        # If koptimal_overall_1 is out of range, set a default value
+        koptimal_overall_2 = 1
+        
+
+    return slope_change0[k_index], percentile, p_value, koptimal_overall_2, reject_null
 
 
 def Window_clusters_labels(distance,n_clusters,cluster_method,clusterOrder):
@@ -1186,7 +961,7 @@ def Window_cluster_centres_aux(distance,n_clusters,cluster_method,scale_ErrorSD,
             ax.plot(centres[i],X_name,'-',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -2.5/len(X_name)),fancybox=True, shadow=True, ncol=5)
     
@@ -1205,7 +980,7 @@ def Window_cluster_centres_aux(distance,n_clusters,cluster_method,scale_ErrorSD,
             ax.plot(centres[i],X_name,'o',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -2.5/len(X_name)),fancybox=True, shadow=True, ncol=5)
  
@@ -1224,7 +999,7 @@ def Window_cluster_centres_aux(distance,n_clusters,cluster_method,scale_ErrorSD,
             ax.plot(centres[i],X_name,'o-',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -2.5/len(X_name)),fancybox=True, shadow=True, ncol=5)
  
@@ -1242,10 +1017,10 @@ def Window_cluster_centres_aux(distance,n_clusters,cluster_method,scale_ErrorSD,
         #ax.hlines(metsgroup,centres[1],np.zeros(len(centres[0])),colors='b')
         for i in range(len(centres)):
             #ax.plot(centres[i],X_name,'-o',label='Cluster '+str(i),markersize=10)
-            ax.errorbar(centres[i],X_name,xerr=scale_ErrorSD*centres_SD[i],fmt='.',label='Cluster '+str(i))
+            ax.errorbar(centres[i],X_name,xerr=scale_ErrorSD*centres_SD[i],fmt='.',label='Cluster '+str(i),capsize=5)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids') # !!!!CHANGE THIS!!!!!
+        ax.set_xlabel('Normalized centroids') # !!!!CHANGE THIS!!!!!
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -2.5/len(X_name)),fancybox=True, shadow=True, ncol=5)
             
@@ -1272,7 +1047,7 @@ def Window_cluster_centres_plot(centres,centres_SD,scale_ErrorSD,plotType):
             ax.plot(centres.loc[i],X_name,'-',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.01),fancybox=True, shadow=True, ncol=5)
     
@@ -1291,7 +1066,7 @@ def Window_cluster_centres_plot(centres,centres_SD,scale_ErrorSD,plotType):
             ax.plot(centres.loc[i],X_name,'o',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.01),fancybox=True, shadow=True, ncol=5)
  
@@ -1310,7 +1085,7 @@ def Window_cluster_centres_plot(centres,centres_SD,scale_ErrorSD,plotType):
             ax.plot(centres.loc[i],X_name,'o-',label='Cluster '+str(i),markersize=10)
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.01),fancybox=True, shadow=True, ncol=5)
  
@@ -1331,7 +1106,7 @@ def Window_cluster_centres_plot(centres,centres_SD,scale_ErrorSD,plotType):
             ax.errorbar(centres.loc[i],X_name,xerr=scale_ErrorSD*centres_SD.loc[i],fmt='.',label='Cluster '+str(i))
 
         ax.axvline(x = 0, color = 'black', ls='-', lw=1)
-        ax.set_xlabel('Normalised centroids')
+        ax.set_xlabel('Normalized centroids')
         ax.set_ylim([-1,len(X_name)+1])
         ax.legend(loc='upper center', bbox_to_anchor=(0.5, -2.5/centres.shape[1]),fancybox=True, shadow=True, ncol=5)
 
@@ -1542,37 +1317,38 @@ def EffSize_Clusters(data,modifier,confound_names,modifier_names,X_name,df_propC
     return EffSize_clust_df_list,clust_index
 
 
-def plot_clusters_CovSpace(esp_df,X_name,modifier_names,n_clusters,cluster_method,clusterOrder):
+
+def plot_clusters_CovSpace(esp_df,X_name,modifier_names,n_clusters,cluster_method,clusterOrder,L):
     distance = esp_df[X_name]
     labels = Window_clusters_labels(distance,n_clusters,cluster_method,clusterOrder)
     if len(modifier_names)==1:
-        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0'], '2D': [0 for i in range(len(esp_df[modifier_names[0]+'_z0']))], 'Cluster': labels})
+        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0']+L[0]/2, '2D': [0 for i in range(len(esp_df[modifier_names[0]+'_z0']))], 'Cluster': labels})
         plt.figure(figsize=(12,4))
         sns.lmplot(x=modifier_names[0], y='2D', data=labelsDF, fit_reg=False, hue='Cluster', legend=False)
         plt.yticks([])
         plt.ylabel('')
         # Move the legend to an empty part of the plot
         #plt.legend(loc='upper left')
-        plt.legend() #w0_2D[0], '2D': [0 for i in range(len(w0_2D[0]))], 'Cluster': labels})
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1)) #w0_2D[0], '2D': [0 for i in range(len(w0_2D[0]))], 'Cluster': labels})
         plt.show()
 
     if len(modifier_names)==2:
         #labelsDF = pd.DataFrame({modifier_names[0]: w0_2D[0], modifier_names[1]: w0_2D[1], 'Cluster': labels})
         plt.figure(figsize=(8,4))
-        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0'], modifier_names[1]: esp_df[modifier_names[1]+'_z0'], 'Cluster': labels})
+        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0']+L[0]/2, modifier_names[1]: esp_df[modifier_names[1]+'_z0']+L[1]/2, 'Cluster': labels})
         sns.lmplot(x=modifier_names[0], y=modifier_names[1], data=labelsDF, fit_reg=False, hue='Cluster', legend=False)
 
         plt.legend()
         #plt.legend(loc='upper left')
-        plt.legend(loc = 'center right')
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
         #ax.set_yticks([0,1],["M","F"])
         plt.show()
 
     if len(modifier_names)==3:
-        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0'], modifier_names[1]: esp_df[modifier_names[1]+'_z0'], modifier_names[2]: esp_df[modifier_names[2]+'_z0'],'Cluster': labels})
+        labelsDF = pd.DataFrame({modifier_names[0]: esp_df[modifier_names[0]+'_z0']+L[0]/2, modifier_names[1]: esp_df[modifier_names[1]+'_z0']+L[1]/2, modifier_names[2]: esp_df[modifier_names[2]+'_z0']+L[2]/2,'Cluster': labels})
         sns.lmplot(x=modifier_names[0], y=modifier_names[1], data=labelsDF, fit_reg=False, hue='Cluster', legend=False)
         #plt.legend(loc='upper left')
-        plt.legend()
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
 
         sns.lmplot(x=modifier_names[0], y=modifier_names[2], data=labelsDF, fit_reg=False, hue='Cluster', legend=False)
         #plt.legend(loc='upper left')
@@ -1601,11 +1377,14 @@ def plot_clusters_CovSpace(esp_df,X_name,modifier_names,n_clusters,cluster_metho
         
     return labelsDF
 
+
+
+
 def ESP_pca(features_df,cluster_method,plot_yn,pcomp_1,pcomp_2,n_clusters,clusterOrder):
     from sklearn.decomposition import PCA
     distance = features_df
     
-    pca = PCA(n_components=len(distance.columns))
+    pca = PCA(n_components=min(len(distance.columns),len(distance)))
     
     # Scaled
     scaler = StandardScaler().fit(distance) # Define a standardisation scaler
@@ -1646,7 +1425,7 @@ def ESP_pca(features_df,cluster_method,plot_yn,pcomp_1,pcomp_2,n_clusters,cluste
         plt.ylabel('$PC $'+str(pc2+1)+' ('+str(int(percent2))+'%)')
         #plt.xlim([-45,45])
 
-        plt.legend()
+        plt.legend(loc='upper left', bbox_to_anchor=(1, 1))
     
     return x_pca,cumVar
 
