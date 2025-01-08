@@ -5,7 +5,7 @@ Unsupervised identification of modifiers for the effect size spectrum in omics a
 
 In the terminal or anaconda prompt, type:
 ```
-pip install -i https://test.pypi.org/simple/ ssSIG==1.0.2  (Change this!!!)
+pip install ESPClust==1.1.0
 ```
 
 ## Tutorial 
