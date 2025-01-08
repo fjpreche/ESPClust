@@ -10,7 +10,7 @@ pip install -i https://test.pypi.org/simple/ ssSIG==1.0.2  (Change this!!!)
 
 ## Tutorial 
 
-A tutorial is provided in the Tutorial_ssSIG.ipynb notebook. This illustrates the functioning of the ssSIG package applied to synthetic and real data (available from the `Data` directory).
+A tutorial is provided in the Tutorial_ESPClust.ipynb notebook. This illustrates the functioning of the ssSIG package applied to synthetic and real data (available from the `Data` directory).
 
 ## List of functions
 
