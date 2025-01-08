@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ESPClust',
-    version='1.0.0',
+    version='1.1.0',
 
     url='https://github.com/fjpreche/ESPClust.git',
     author='Francisco Perez-Reche',
