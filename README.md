@@ -1,5 +1,11 @@
 # ESPClust
-Unsupervised identification of modifiers for the effect size spectrum in omics association studies
+Unsupervised identification of modifiers for the effect size spectrum in omics association studies.
+
+## Reference
+
+ESPClust was proposed in the following paper:
+
+Pérez-Reche, F. J., Cheetham, N. J., Bowyer, R. C. E., Thompson, E. J., Tettamanzi, F., Menni, C., & Steves, C. J. (2025). ESPClust: Unsupervised identification of modifiers for the effect size profile in omics association studies. Bioinformatics. https://doi.org/10.1093/BIOINFORMATICS/BTAF065
 
 ## Installation
 
